@@ -1,0 +1,55 @@
+name: 🟢 Supabase Keep-Alive
+
+# Executa a cada 6 dias às 12h UTC (evita pausar no plano Free — pausa após 7 dias sem atividade)
+on:
+  schedule:
+    - cron: '0 12 */6 * *'
+
+  # Permite disparar manualmente pelo GitHub → Actions → Run workflow
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 🔍 Consulta leve no banco (keep-alive)
+        run: |
+          RESPONSE=$(curl --silent --show-error --fail \
+            --max-time 10 \
+            --request GET \
+            "$SUPABASE_URL/rest/v1/keep_alive_log?select=pinged_at&order=pinged_at.desc&limit=1" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --header "Content-Type: application/json")
+
+          echo "✅ Resposta do Supabase: $RESPONSE"
+
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: 📝 Registrar ping no banco
+        run: |
+          curl --silent --show-error --fail \
+            --max-time 10 \
+            --request POST \
+            "$SUPABASE_URL/rest/v1/keep_alive_log" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --header "Content-Type: application/json" \
+            --header "Prefer: return=minimal" \
+            --data '{"source": "github-actions"}'
+
+          echo "✅ Ping registrado com sucesso em $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: ✅ Confirmação
+        run: |
+          echo "🟢 Supabase keep-alive executado em $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "⏭️  Próximo ping em 6 dias."

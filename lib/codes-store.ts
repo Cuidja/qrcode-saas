@@ -96,7 +96,7 @@ export async function getStoredCodes(): Promise<QRCodeItem[]> {
 
 // Salva localmente E sincroniza assincronamente com o banco de dados Supabase
 export async function saveCodeItem(item: QRCodeItem): Promise<QRCodeItem[]> {
-  const current = getStoredCodes();
+  const current = await getStoredCodes();
   const existingIdx = current.findIndex(c => c.id === item.id);
   let updated: QRCodeItem[];
 
@@ -136,7 +136,7 @@ export async function saveCodeItem(item: QRCodeItem): Promise<QRCodeItem[]> {
 }
 
 export async function updateCodeTarget(id: string, newTarget: string): Promise<QRCodeItem[]> {
-  const current = getStoredCodes();
+  const current = await getStoredCodes();
   const itemToUpdate = current.find(c => c.id === id);
   const updated = current.map(c => c.id === id ? { ...c, target_url: newTarget, label: newTarget } : c);
 
@@ -157,7 +157,7 @@ export async function updateCodeTarget(id: string, newTarget: string): Promise<Q
 }
 
 export async function toggleCodeActive(id: string): Promise<QRCodeItem[]> {
-  const current = getStoredCodes();
+  const current = await getStoredCodes();
   const itemToUpdate = current.find(c => c.id === id);
   const updated = current.map(c => c.id === id ? { ...c, active: !c.active } : c);
 
@@ -178,7 +178,7 @@ export async function toggleCodeActive(id: string): Promise<QRCodeItem[]> {
 }
 
 export async function deleteCodeItem(id: string): Promise<QRCodeItem[]> {
-  const current = getStoredCodes();
+  const current = await getStoredCodes();
   const itemToDelete = current.find(c => c.id === id);
   const updated = current.filter(c => c.id !== id);
 

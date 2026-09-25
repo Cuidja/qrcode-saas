@@ -1,3 +1,5 @@
+import { createClient } from "./supabase/client";
+
 export interface QRCodeItem {
   id: string;
   label: string;
@@ -39,25 +41,6 @@ export const INITIAL_MOCK_CODES: QRCodeItem[] = [
     active: true,
     expires_at: "Expires in 13 days",
     created_at: "Sep 24, 2026"
-  },
-  {
-    id: "2",
-    label: "https://cuidja.com/lead",
-    slug: "bh1ui8",
-    target_url: "https://cuidja.com/lead",
-    type: "website",
-    business_name: "Cuidja Leads",
-    color: "#0284c7",
-    bg_color: "#ffffff",
-    icon: "google",
-    shape: "rounded",
-    corner_style: "rounded",
-    cta_frame: "bottom_banner",
-    cta_text: "Scan Me",
-    scans: 2,
-    active: true,
-    expires_at: "Expires in 13 days",
-    created_at: "Sep 24, 2026"
   }
 ];
 
@@ -75,7 +58,8 @@ export function getStoredCodes(): QRCodeItem[] {
   }
 }
 
-export function saveCodeItem(item: QRCodeItem): QRCodeItem[] {
+// Salva localmente E sincroniza assincronamente com o banco de dados Supabase
+export async function saveCodeItem(item: QRCodeItem): Promise<QRCodeItem[]> {
   const current = getStoredCodes();
   const existingIdx = current.findIndex(c => c.id === item.id);
   let updated: QRCodeItem[];
@@ -90,32 +74,90 @@ export function saveCodeItem(item: QRCodeItem): QRCodeItem[] {
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
+
+  // Tentar persistir no banco Supabase
+  try {
+    const supabase = createClient();
+    await supabase.from("codes").upsert({
+      slug: item.slug,
+      target_url: item.target_url,
+      label: item.label,
+      type: item.type,
+      active: item.active,
+      color: item.color,
+      bg_color: item.bg_color,
+      icon: item.icon,
+      shape: item.shape,
+      corner_style: item.corner_style,
+      cta_frame: item.cta_frame,
+      cta_text: item.cta_text
+    }, { onConflict: "slug" });
+  } catch (e) {
+    console.warn("Sem conexão direta ao Supabase no momento, mantendo em cache local:", e);
+  }
+
   return updated;
 }
 
-export function updateCodeTarget(id: string, newTarget: string): QRCodeItem[] {
+export async function updateCodeTarget(id: string, newTarget: string): Promise<QRCodeItem[]> {
   const current = getStoredCodes();
+  const itemToUpdate = current.find(c => c.id === id);
   const updated = current.map(c => c.id === id ? { ...c, target_url: newTarget, label: newTarget } : c);
+
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
+
+  if (itemToUpdate) {
+    try {
+      const supabase = createClient();
+      await supabase.from("codes").update({ target_url: newTarget, label: newTarget }).eq("slug", itemToUpdate.slug);
+    } catch (e) {
+      console.warn("Erro ao sincronizar update com Supabase:", e);
+    }
+  }
+
   return updated;
 }
 
-export function toggleCodeActive(id: string): QRCodeItem[] {
+export async function toggleCodeActive(id: string): Promise<QRCodeItem[]> {
   const current = getStoredCodes();
+  const itemToUpdate = current.find(c => c.id === id);
   const updated = current.map(c => c.id === id ? { ...c, active: !c.active } : c);
+
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
+
+  if (itemToUpdate) {
+    try {
+      const supabase = createClient();
+      await supabase.from("codes").update({ active: !itemToUpdate.active }).eq("slug", itemToUpdate.slug);
+    } catch (e) {
+      console.warn("Erro ao atualizar status no Supabase:", e);
+    }
+  }
+
   return updated;
 }
 
-export function deleteCodeItem(id: string): QRCodeItem[] {
+export async function deleteCodeItem(id: string): Promise<QRCodeItem[]> {
   const current = getStoredCodes();
+  const itemToDelete = current.find(c => c.id === id);
   const updated = current.filter(c => c.id !== id);
+
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
+
+  if (itemToDelete) {
+    try {
+      const supabase = createClient();
+      await supabase.from("codes").delete().eq("slug", itemToDelete.slug);
+    } catch (e) {
+      console.warn("Erro ao remover no Supabase:", e);
+    }
+  }
+
   return updated;
 }

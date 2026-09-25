@@ -39,7 +39,6 @@ export const INITIAL_MOCK_CODES: QRCodeItem[] = [
     cta_text: "Scan Me",
     scans: 0,
     active: true,
-    expires_at: "Expires in 13 days",
     created_at: "Sep 24, 2026"
   }
 ];

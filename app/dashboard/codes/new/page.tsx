@@ -135,7 +135,6 @@ export default function NewCodePage() {
       cta_text: frameText,
       scans: 0,
       active: true,
-      expires_at: "Expires in 14 days",
       created_at: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     };
 

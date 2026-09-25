@@ -268,21 +268,12 @@ export default function CodesPage() {
                   }}>
                     {code.active ? "Active" : "Paused"}
                   </span>
-
-                  {code.expires_at && (
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 12,
-                      backgroundColor: "#e0f2fe", color: "#0369a1"
-                    }}>
-                      ⏱ {code.expires_at}
-                    </span>
-                  )}
                 </div>
 
                 {/* Short Link com atalho para copiar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>
-                    qrhub.io/r/{code.slug}
+                    {getAppBaseUrl().replace(/^https?:\/\//, "")}/r/{code.slug}
                   </span>
                   <button
                     onClick={() => handleCopyLink(code)}

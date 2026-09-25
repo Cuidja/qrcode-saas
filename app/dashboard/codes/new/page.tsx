@@ -216,6 +216,13 @@ export default function NewCodePage() {
                   key={type.id}
                   onClick={() => {
                     setSelectedType(type.id);
+                    setTargetUrl(
+                      type.id === "instagram" ? "https://instagram.com/seu-perfil" :
+                      type.id === "pdf" ? "https://seusite.com/documento.pdf" :
+                      type.id === "vcard" ? "https://qrhub.io/vcard" :
+                      type.id === "rating" ? "https://g.page/r/seu-negocio/review" :
+                      "https://www.your-website.com"
+                    );
                     setStep(2);
                   }}
                   style={{
@@ -252,6 +259,22 @@ export default function NewCodePage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 32, alignItems: "start" }}>
             {/* COLUNA ESQUERDA: OPÇÕES DE CUSTOMIZAÇÃO */}
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+              {/* 0. TARGET DESTINATION LINK */}
+              <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
+                  TARGET URL / DESTINATION
+                </h3>
+                <input
+                  value={targetUrl}
+                  onChange={e => setTargetUrl(e.target.value)}
+                  placeholder="https://www.your-website.com"
+                  style={{
+                    width: "100%", padding: "10px 14px", borderRadius: 8,
+                    border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box"
+                  }}
+                />
+              </div>
 
               {/* 1. FRAMES (Molduras) */}
               <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>

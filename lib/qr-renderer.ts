@@ -188,7 +188,7 @@ export async function renderCustomQRCode(
   if (frameStyle === "bottom_banner" || frameStyle === "badge") {
     const bannerY = canvasHeight - 48;
 
-    if (frameStyle === "banner" || frameStyle === "bottom_banner") {
+    if (frameStyle === "bottom_banner") {
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.roundRect(16, bannerY, canvasWidth - 32, 38, 10);

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { 
   QrCode, 
   BarChart3, 
-  FolderCanvas, 
+  Folder, 
   Settings, 
   Zap, 
   Plus, 
@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = [
     { label: "All QR Codes", href: "/dashboard/codes", icon: QrCode },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-    { label: "Folders", href: "/dashboard/folders", icon: FolderCanvas },
+    { label: "Folders", href: "/dashboard/folders", icon: Folder },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 

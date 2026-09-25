@@ -126,25 +126,50 @@ export default function CodesPage() {
           </h1>
         </div>
 
-        <Link
-          href="/dashboard/codes/new"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            backgroundColor: "#0f172a",
-            color: "#ffffff",
-            padding: "10px 20px",
-            borderRadius: 8,
-            fontWeight: 700,
-            fontSize: 14,
-            textDecoration: "none",
-            boxShadow: "0 4px 12px rgba(15,23,42,0.15)",
-            transition: "all 0.2s"
-          }}
-        >
-          <Plus size={18} /> CREATE QR CODE
-        </Link>
+        <div style={{ display: "flex", gap: 12 }}>
+          <a
+            href="https://productmate.com/pt-br/gerador-de-link-de-avaliacao-google"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "#fffbebf5",
+              color: "#b45309",
+              border: "1px solid #fcd34d",
+              padding: "10px 16px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              textDecoration: "none",
+              boxShadow: "0 2px 6px rgba(245,158,11,0.1)",
+              transition: "all 0.2s"
+            }}
+          >
+            <span>⭐</span> Gerador de Link Google Reviews
+          </a>
+
+          <Link
+            href="/dashboard/codes/new"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "#0f172a",
+              color: "#ffffff",
+              padding: "10px 20px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 14,
+              textDecoration: "none",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.15)",
+              transition: "all 0.2s"
+            }}
+          >
+            <Plus size={18} /> CREATE QR CODE
+          </Link>
+        </div>
       </div>
 
       {/* Toolbar & Filter Controls (Padrão QRCG) */}

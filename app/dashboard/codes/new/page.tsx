@@ -266,9 +266,23 @@ export default function NewCodePage() {
 
               {/* 0. TARGET DESTINATION LINK */}
               <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
-                  TARGET URL / DESTINATION
-                </h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+                    TARGET URL / DESTINATION
+                  </h3>
+                  <a
+                    href="https://productmate.com/pt-br/gerador-de-link-de-avaliacao-google"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      fontSize: 12, fontWeight: 700, color: "#b45309", textDecoration: "none",
+                      backgroundColor: "#fef3c7", padding: "4px 10px", borderRadius: 6,
+                      border: "1px solid #fcd34d", display: "inline-flex", alignItems: "center", gap: 4
+                    }}
+                  >
+                    <span>⭐</span> Gerar Link Google Reviews ↗
+                  </a>
+                </div>
                 <input
                   value={targetUrl}
                   onChange={e => setTargetUrl(e.target.value)}

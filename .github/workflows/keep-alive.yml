@@ -1,55 +1,37 @@
-name: 🟢 Supabase Keep-Alive
+name: 🟢 Supabase Keep-Alive Ping
 
-# Executa a cada 6 dias às 12h UTC (evita pausar no plano Free — pausa após 7 dias sem atividade)
+# Executa a cada 5 dias às 03:00 UTC (evita a pausa automática do plano Free do Supabase após 7 dias de inatividade)
 on:
   schedule:
-    - cron: '0 12 */6 * *'
+    - cron: '0 3 */5 * *'
 
-  # Permite disparar manualmente pelo GitHub → Actions → Run workflow
+  # Permite disparar manualmente a qualquer momento via GitHub Actions UI
   workflow_dispatch:
 
 jobs:
-  ping:
-    name: Ping Supabase
+  keep-alive:
+    name: Insert Random Data Ping
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: 🔍 Consulta leve no banco (keep-alive)
+      - name: 🎲 Inserir dado aleatório e seguro no Supabase
         run: |
-          RESPONSE=$(curl --silent --show-error --fail \
-            --max-time 10 \
-            --request GET \
-            "$SUPABASE_URL/rest/v1/keep_alive_log?select=pinged_at&order=pinged_at.desc&limit=1" \
-            --header "apikey: $SUPABASE_ANON_KEY" \
-            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            --header "Content-Type: application/json")
+          RANDOM_HASH=$(openssl rand -hex 16)
+          echo "Disparando ping seguro com hash: $RANDOM_HASH"
 
-          echo "✅ Resposta do Supabase: $RESPONSE"
-
-        env:
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-
-      - name: 📝 Registrar ping no banco
-        run: |
           curl --silent --show-error --fail \
-            --max-time 10 \
+            --max-time 15 \
             --request POST \
             "$SUPABASE_URL/rest/v1/keep_alive_log" \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             --header "Content-Type: application/json" \
             --header "Prefer: return=minimal" \
-            --data '{"source": "github-actions"}'
+            --data "{\"random_hash\": \"$RANDOM_HASH\", \"source\": \"github-actions-cron\"}"
 
-          echo "✅ Ping registrado com sucesso em $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "✅ Ping registrado no Supabase em $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-
-      - name: ✅ Confirmação
-        run: |
-          echo "🟢 Supabase keep-alive executado em $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "⏭️  Próximo ping em 6 dias."

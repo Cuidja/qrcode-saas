@@ -75,21 +75,21 @@ export default function CodesPage() {
     setNewTargetUrl(code.target_url);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingCode || !newTargetUrl.trim()) return;
-    const updated = updateCodeTarget(editingCode.id, newTargetUrl.trim());
+    const updated = await updateCodeTarget(editingCode.id, newTargetUrl.trim());
     setCodes(updated);
     setEditingCode(null);
   };
 
-  const handleToggleActive = (id: string) => {
-    const updated = toggleCodeActive(id);
+  const handleToggleActive = async (id: string) => {
+    const updated = await toggleCodeActive(id);
     setCodes(updated);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este QR Code?")) {
-      const updated = deleteCodeItem(id);
+      const updated = await deleteCodeItem(id);
       setCodes(updated);
     }
   };

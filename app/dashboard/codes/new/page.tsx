@@ -114,7 +114,7 @@ export default function NewCodePage() {
     setStep(2);
   };
 
-  const handleCompleteCode = () => {
+  const handleCompleteCode = async () => {
     const newItem: QRCodeItem = {
       id: Date.now().toString(),
       label: targetUrl,
@@ -134,7 +134,7 @@ export default function NewCodePage() {
       created_at: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     };
 
-    saveCodeItem(newItem);
+    await saveCodeItem(newItem);
     router.push("/dashboard/codes");
   };
 

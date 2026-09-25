@@ -43,18 +43,55 @@ export const INITIAL_MOCK_CODES: QRCodeItem[] = [
   }
 ];
 
-export function getStoredCodes(): QRCodeItem[] {
+export async function getStoredCodes(): Promise<QRCodeItem[]> {
   if (typeof window === "undefined") return INITIAL_MOCK_CODES;
+
+  let localItems: QRCodeItem[] = [];
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_MOCK_CODES));
-      return INITIAL_MOCK_CODES;
+    if (data) {
+      localItems = JSON.parse(data);
     }
-    return JSON.parse(data);
   } catch {
+    // fallback
+  }
+
+  try {
+    const supabase = createClient();
+    const { data: dbCodes, error } = await supabase.from("codes").select("*").order("created_at", { ascending: false });
+
+    if (dbCodes && dbCodes.length > 0 && !error) {
+      const mapped: QRCodeItem[] = dbCodes.map(c => ({
+        id: c.id,
+        label: c.label || c.target_url,
+        slug: c.slug,
+        target_url: c.target_url,
+        type: c.type || "website",
+        color: c.color || "#000000",
+        bg_color: c.bg_color || "#ffffff",
+        icon: c.icon || "none",
+        shape: c.shape || "square",
+        corner_style: c.corner_style || "square",
+        cta_frame: c.cta_frame || "bottom_banner",
+        cta_text: c.cta_text || "SCAN ME",
+        scans: c.scans_count || 0,
+        active: c.active !== false,
+        created_at: c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Sep 24, 2026"
+      }));
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+      return mapped;
+    }
+  } catch (e) {
+    console.warn("Usando cache local para listagem de QR codes:", e);
+  }
+
+  if (localItems.length === 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_MOCK_CODES));
     return INITIAL_MOCK_CODES;
   }
+
+  return localItems;
 }
 
 // Salva localmente E sincroniza assincronamente com o banco de dados Supabase

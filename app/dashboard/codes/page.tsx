@@ -66,7 +66,11 @@ export default function CodesPage() {
   const [newTargetUrl, setNewTargetUrl] = useState("");
 
   useEffect(() => {
-    setCodes(getStoredCodes());
+    async function loadCodes() {
+      const items = await getStoredCodes();
+      setCodes(items);
+    }
+    loadCodes();
   }, []);
 
   const getAppBaseUrl = () => {

@@ -1,133 +1,169 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/dashboard/codes", label: "QR Codes", icon: "⊞" },
-  { href: "/dashboard/reviews", label: "Avaliações", icon: "★" },
-  { href: "/dashboard/settings", label: "Configurações", icon: "⚙" },
-  { href: "/dashboard/billing", label: "Faturamento", icon: "◈" },
-];
+import { 
+  QrCode, 
+  BarChart3, 
+  FolderCanvas, 
+  Settings, 
+  Zap, 
+  Plus, 
+  LogOut,
+  HelpCircle,
+  TrendingUp
+} from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = [
+    { label: "All QR Codes", href: "/dashboard/codes", icon: QrCode },
+    { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    { label: "Folders", href: "/dashboard/folders", icon: FolderCanvas },
+    { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  ];
 
   return (
-    <div className="dashboard-area" style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
-      {/* Sidebar */}
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+      {/* Sidebar QRCG Clean Light Mode */}
       <aside style={{
-        width: 240, flexShrink: 0,
-        borderRight: "1px solid var(--border)",
-        display: "flex", flexDirection: "column",
-        position: "sticky", top: 0, height: "100vh",
-        background: "var(--bg-card)"
+        width: 260,
+        backgroundColor: "#ffffff",
+        borderRight: "1px solid #e2e8f0",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        padding: "20px 16px",
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        boxSizing: "border-box"
       }}>
-        {/* Logo */}
-        <div style={{
-          padding: "24px 20px 20px",
-          borderBottom: "1px solid var(--border)"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, fontWeight: 800, color: "white"
-            }}>Q</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>QRHub</div>
-              <div style={{
-                fontSize: 11, color: "#7c3aed", fontWeight: 600,
-                background: "rgba(124,58,237,0.1)", padding: "1px 8px",
-                borderRadius: 100, display: "inline-block", marginTop: 2
-              }}>Free</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: "12px 12px" }}>
-          {NAV.map(item => {
-            const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-            return (
-              <Link key={item.href} href={item.href} style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 12px", borderRadius: 10, marginBottom: 2,
-                textDecoration: "none", fontSize: 14, fontWeight: 500,
-                color: active ? "white" : "var(--text-muted)",
-                background: active ? "linear-gradient(135deg, rgba(124,58,237,0.3), rgba(109,40,217,0.15))" : "transparent",
-                border: active ? "1px solid rgba(124,58,237,0.3)" : "1px solid transparent",
-                transition: "all 0.15s"
-              }}>
-                <span style={{ fontSize: 16, opacity: active ? 1 : 0.6 }}>{item.icon}</span>
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User */}
-        <div style={{
-          padding: "16px 16px 20px",
-          borderTop: "1px solid var(--border)"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div>
+          {/* Logo QRCG por Bitly */}
+          <div style={{ padding: "8px 12px", marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 34, height: 34, borderRadius: 8,
-              background: "linear-gradient(135deg, #7c3aed, #4c1d95)",
+              backgroundColor: "#0284c7", color: "#ffffff",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "white", fontWeight: 700, fontSize: 14
-            }}>U</div>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Minha Empresa</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>1 de 10 QR codes</div>
+              fontWeight: 800, fontSize: 18
+            }}>
+              <QrCode size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px", color: "#0f172a" }}>
+                QRCG <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>by Bitly</span>
+              </div>
             </div>
           </div>
+
+          {/* Weekly Scans Widget */}
           <div style={{
-            marginTop: 10, height: 4, borderRadius: 4,
-            background: "var(--border)", overflow: "hidden"
+            backgroundColor: "#f8fafc",
+            borderRadius: 10,
+            padding: "14px 16px",
+            border: "1px solid #e2e8f0",
+            marginBottom: 20
           }}>
-            <div style={{
-              width: "10%", height: "100%", borderRadius: 4,
-              background: "linear-gradient(90deg, #7c3aed, #06b6d4)"
-            }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+              <span>Weekly Scans</span>
+              <TrendingUp size={14} color="#0284c7" />
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>2</span>
+              <span style={{ fontSize: 11, color: "#94a3b8" }}>since Sep 24th</span>
+            </div>
+          </div>
+
+          {/* Navegação Principal */}
+          <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {navItems.map(item => {
+              const Icon = item.icon;
+              const isActive = pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? "#0284c7" : "#475569",
+                    backgroundColor: isActive ? "#f0f9ff" : "transparent",
+                    textDecoration: "none",
+                    transition: "all 0.15s ease"
+                  }}
+                >
+                  <Icon size={18} color={isActive ? "#0284c7" : "#64748b"} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Rodapé da Sidebar - Overview do Plano */}
+        <div>
+          <div style={{
+            padding: 14,
+            borderRadius: 12,
+            backgroundColor: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            marginBottom: 16
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
+              Overview
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", marginBottom: 6 }}>
+              <span>Dynamic QR Codes</span>
+              <span style={{ fontWeight: 700, color: "#0f172a" }}>2 of 250</span>
+            </div>
+            <div style={{ height: 6, backgroundColor: "#e2e8f0", borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
+              <div style={{ width: "10%", height: "100%", backgroundColor: "#0284c7", borderRadius: 3 }} />
+            </div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>
+              Trial ends in 13 days
+            </div>
+            <Link
+              href="/dashboard/billing"
+              style={{
+                display: "block",
+                textAlign: "center",
+                padding: "7px 12px",
+                borderRadius: 20,
+                border: "1px solid #0284c7",
+                color: "#0284c7",
+                fontSize: 12,
+                fontWeight: 700,
+                textDecoration: "none",
+                backgroundColor: "#ffffff",
+                transition: "all 0.15s"
+              }}
+            >
+              UPGRADE
+            </Link>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "0 4px", fontSize: 13, color: "#64748b" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <HelpCircle size={15} /> Ajuda
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "#ef4444" }}>
+              <LogOut size={15} /> Sair
+            </span>
           </div>
         </div>
       </aside>
 
-      {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Topbar */}
-        <header style={{
-          height: 64, borderBottom: "1px solid var(--border)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 32px", position: "sticky", top: 0, zIndex: 40,
-          background: "rgba(10,10,15,0.85)", backdropFilter: "blur(12px)"
-        }}>
-          <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
-            {pathname === "/dashboard" && "Visão geral"}
-            {pathname.startsWith("/dashboard/codes") && "QR Codes"}
-            {pathname.startsWith("/dashboard/reviews") && "Avaliações"}
-            {pathname.startsWith("/dashboard/settings") && "Configurações"}
-            {pathname.startsWith("/dashboard/billing") && "Faturamento"}
-          </div>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <Link href="/dashboard/codes/new" style={{
-              padding: "8px 18px", borderRadius: 8,
-              background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-              color: "white", textDecoration: "none", fontSize: 13, fontWeight: 600,
-              boxShadow: "0 0 16px rgba(124,58,237,0.3)"
-            }}>+ Novo QR Code</Link>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, padding: "32px", overflowY: "auto" }}>
-          {children}
-        </main>
-      </div>
+      {/* Área Principal de Conteúdo */}
+      <main style={{ flex: 1, padding: "32px 40px", maxWidth: 1200, margin: "0 auto", boxSizing: "border-box" }}>
+        {children}
+      </main>
     </div>
   );
 }

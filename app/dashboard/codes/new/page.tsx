@@ -1,25 +1,59 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import QRCode from "qrcode";
+import Link from "next/link";
+import { 
+  Globe, 
+  Contact, 
+  FileText, 
+  Share2, 
+  Instagram, 
+  Image as ImageIcon, 
+  Smartphone, 
+  Video, 
+  Calendar, 
+  QrCode as QrIcon, 
+  Music, 
+  MessageSquare, 
+  Star,
+  ArrowLeft,
+  Check,
+  Download,
+  RotateCcw
+} from "lucide-react";
+import { renderCustomQRCode } from "@/lib/qr-renderer";
 import { saveCodeItem, QRCodeItem } from "@/lib/codes-store";
 
-function generateSlug(len = 8) {
+function generateSlug(len = 6) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
-const COLOR_PRESETS = [
-  { name: "Azul Google", color: "#2563eb", bg: "#ffffff" },
-  { name: "Roxo SaaS", color: "#7c3aed", bg: "#ffffff" },
-  { name: "Verde WhatsApp", color: "#16a34a", bg: "#ffffff" },
-  { name: "Vermelho / Rosa", color: "#dc2626", bg: "#ffffff" },
-  { name: "Cyan Cyberpunk", color: "#06b6d4", bg: "#111118" },
-  { name: "Dark Luxe", color: "#f3f4f6", bg: "#111118" },
+// Preset de Tipos de QR Code do QRCG
+const CONTENT_TYPES = [
+  { id: "website", title: "Website", desc: "Link to your website, any Google URL or document", icon: Globe },
+  { id: "vcard", title: "vCard Plus", desc: "Share personalized contact details", icon: Contact },
+  { id: "pdf", title: "PDF", desc: "Link to a mobile-optimized PDF", icon: FileText },
+  { id: "social", title: "Social Media", desc: "Link to your social media channels", icon: Share2 },
+  { id: "instagram", title: "Instagram", desc: "Link to your Instagram business page", icon: Instagram },
+  { id: "images", title: "Images", desc: "Show a series of photos", icon: ImageIcon },
+  { id: "app", title: "App", desc: "View your app on various App Stores", icon: Smartphone },
+  { id: "video", title: "Video", desc: "Share one or more videos", icon: Video },
+  { id: "event", title: "Event", desc: "Promote your event", icon: Calendar },
+  { id: "2d", title: "2D Barcode", desc: "Supports GS1 standards", icon: QrIcon },
+  { id: "mp3", title: "MP3", desc: "Play an audio file", icon: Music },
+  { id: "feedback", title: "Feedback", desc: "Collect feedback and get rated", icon: MessageSquare },
+  { id: "rating", title: "Rating", desc: "Ask a question and get rated", icon: Star },
 ];
 
-const ICONS = [
+// SVGs das Logos para centro do QR
+const LOGO_PRESETS = [
   { id: "none", label: "Nenhum", svg: null },
+  {
+    id: "web",
+    label: "Web / Globo",
+    svg: `<svg viewBox="0 0 24 24" width="32" height="32" fill="#0284c7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>`
+  },
   {
     id: "google",
     label: "Google",
@@ -29,16 +63,6 @@ const ICONS = [
     id: "whatsapp",
     label: "WhatsApp",
     svg: `<svg viewBox="0 0 24 24" width="32" height="32" fill="#25D366"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>`
-  },
-  {
-    id: "wifi",
-    label: "Wi-Fi",
-    svg: `<svg viewBox="0 0 24 24" width="32" height="32" fill="#06b6d4"><path d="M12 3c-4.97 0-9.5 2.01-12 5.25l2.5 2.5c1.94-2.58 5.6-4.25 9.5-4.25s7.56 1.67 9.5 4.25l2.5-2.5c-2.5-3.24-7.03-5.25-12-5.25zm0 6c-3.31 0-6.33 1.34-8.5 3.5l2.5 2.5c1.5-1.5 3.55-2.5 6-2.5s4.5 1 6 2.5l2.5-2.5c-2.17-2.16-5.19-3.5-8.5-3.5zm0 6c-1.66 0-3.17.67-4.25 1.75l4.25 4.25 4.25-4.25c-1.08-1.08-2.59-1.75-4.25-1.75z"/></svg>`
-  },
-  {
-    id: "star",
-    label: "Avaliação",
-    svg: `<svg viewBox="0 0 24 24" width="32" height="32" fill="#eab308"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`
   }
 ];
 
@@ -46,439 +70,413 @@ export default function NewCodePage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [label, setLabel] = useState("");
-  const [targetUrl, setTargetUrl] = useState("");
-  const [business, setBusiness] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedType, setSelectedType] = useState<string>("website");
+  const [targetUrl, setTargetUrl] = useState("https://www.website.com");
   const [slug, setSlug] = useState("");
 
-  // Customização Visual
-  const [selectedColor, setSelectedColor] = useState(COLOR_PRESETS[0]);
-  const [selectedIcon, setSelectedIcon] = useState("google");
-  const [ctaFrame, setCtaFrame] = useState<"badge" | "banner" | "simple">("banner");
-  const [ctaText, setCtaText] = useState("SCAN ME");
+  // Estúdio de Design (Shapes, Frames, Corners, Colors)
+  const [frameStyle, setFrameStyle] = useState<"none" | "badge" | "top_banner" | "bottom_banner">("bottom_banner");
+  const [frameText, setFrameText] = useState("SCAN ME");
+  const [selectedLogo, setSelectedLogo] = useState("web");
+  const [shape, setShape] = useState<"square" | "rounded" | "dots" | "classy">("square");
+  const [cornerStyle, setCornerStyle] = useState<"square" | "rounded" | "circle" | "leaf">("square");
+  const [qrColor, setQrColor] = useState("#000000");
+  const [bgColor, setBgColor] = useState("#ffffff");
 
   useEffect(() => {
     setSlug(generateSlug());
   }, []);
 
-  const baseUrl = typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
-    : "http://localhost:3000";
+  const shortLink = `qrhub.io/r/${slug}`;
 
-  const shortLinkDisplay = baseUrl.replace(/^https?:\/\//, "") + `/r/${slug}`;
-  const fullShortUrl = `${baseUrl}/r/${slug}`;
+  // Renderizar o QR Code em tempo real no Canvas sempre que qualquer propriedade mudar
+  useEffect(() => {
+    if (step === 2 && canvasRef.current) {
+      const logoSvg = LOGO_PRESETS.find(l => l.id === selectedLogo)?.svg || null;
 
-  async function renderQR() {
-    if (!canvasRef.current) return;
-    await QRCode.toCanvas(canvasRef.current, fullShortUrl, {
-      width: 240,
-      margin: 2,
-      color: {
-        dark: selectedColor.color,
-        light: selectedColor.bg
-      }
-    });
-  }
+      renderCustomQRCode(canvasRef.current, {
+        text: `https://${shortLink}`,
+        width: 260,
+        color: qrColor,
+        bgColor: bgColor,
+        shape: shape,
+        cornerStyle: cornerStyle,
+        frameStyle: frameStyle,
+        frameText: frameText,
+        logoSvg: logoSvg
+      });
+    }
+  }, [step, targetUrl, slug, frameStyle, frameText, selectedLogo, shape, cornerStyle, qrColor, bgColor]);
 
-  function handleSaveAndFinish() {
+  const handleCreateType = () => {
+    if (!targetUrl.trim()) return;
+    setStep(2);
+  };
+
+  const handleCompleteCode = () => {
     const newItem: QRCodeItem = {
       id: Date.now().toString(),
-      label: label.trim(),
+      label: targetUrl,
       slug: slug,
-      target_url: targetUrl.trim(),
-      business_name: business.trim() || "Minha Empresa",
-      color: selectedColor.color,
-      bg_color: selectedColor.bg,
-      icon: selectedIcon,
-      cta_frame: ctaFrame,
-      cta_text: ctaText || "SCAN ME",
+      target_url: targetUrl,
+      type: selectedType as any,
+      color: qrColor,
+      bg_color: bgColor,
+      icon: selectedLogo,
+      shape: shape,
+      corner_style: cornerStyle,
+      cta_frame: frameStyle,
+      cta_text: frameText,
       scans: 0,
       active: true,
-      created_at: new Date().toLocaleDateString("pt-BR")
+      expires_at: "Expires in 14 days",
+      created_at: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     };
 
     saveCodeItem(newItem);
-    setStep(4);
-    setTimeout(renderQR, 100);
-  }
-
-  function handleNext() {
-    if (step === 1) {
-      if (!label.trim() || !targetUrl.trim()) return;
-      setStep(2);
-    } else if (step === 2) {
-      setStep(3);
-    } else if (step === 3) {
-      handleSaveAndFinish();
-    }
-  }
-
-  const inputStyle = {
-    width: "100%", padding: "12px 16px", borderRadius: 10,
-    background: "var(--bg)", border: "1px solid var(--border-bright)",
-    color: "var(--text)", fontSize: 15, outline: "none"
-  };
-
-  const labelStyle = {
-    display: "block", fontSize: 13, fontWeight: 600,
-    color: "var(--text-muted)", marginBottom: 8
+    router.push("/dashboard/codes");
   };
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 6 }}>
-          Novo QR Code Dinâmico
-        </h1>
-        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-          Crie, personalize e publique em 4 passos simples
-        </p>
+    <div>
+      {/* Top Bar Navigation */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <button
+          onClick={() => step === 2 ? setStep(1) : router.push("/dashboard/codes")}
+          style={{
+            border: "none", background: "none", color: "#0284c7", fontSize: 14,
+            fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6
+          }}
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
+
+        <div style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>
+          {step === 1 ? "Step 1: Choose Type" : "Step 2: Customize QR Code"}
+        </div>
       </div>
 
-      {/* Progress Bar */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 36 }}>
-        {[1, 2, 3, 4].map(s => (
-          <div key={s} style={{
-            flex: 1, height: 4, borderRadius: 4,
-            background: step >= s
-              ? "linear-gradient(90deg, #7c3aed, #06b6d4)"
-              : "var(--border)"
-          }} />
-        ))}
-      </div>
+      {/* PASSO 1: CHOOSE YOUR QR CODE TYPE (Grid do QRCG) */}
+      {step === 1 && (
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", marginBottom: 24 }}>
+            Create your QR Code
+          </h1>
 
-      <div style={{
-        background: "var(--bg-card)", border: "1px solid var(--border)",
-        borderRadius: 20, padding: 36
-      }}>
-
-        {/* STEP 1 — BÁSICO */}
-        {step === 1 && (
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>1. Informações básicas</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 28 }}>
-              Defina o nome de controle e a URL de destino inicial
-            </p>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Nome do QR Code *</label>
-              <input
-                value={label} onChange={e => setLabel(e.target.value)}
-                placeholder="Ex: Placa Mesa 01 - Google Reviews"
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>URL de destino atual *</label>
-              <input
-                value={targetUrl} onChange={e => setTargetUrl(e.target.value)}
-                placeholder="https://g.page/r/seu-negocio/review"
-                style={inputStyle}
-              />
-              <p style={{ fontSize: 12, color: "#06b6d4", marginTop: 6, fontWeight: 500 }}>
-                💡 Você poderá trocar esse link a qualquer momento no futuro sem alterar o QR Code impresso!
-              </p>
-            </div>
-
-            <div style={{ marginBottom: 28 }}>
-              <label style={labelStyle}>Short link gerado (Impresso no QR)</label>
-              <div style={{
-                padding: "12px 16px", borderRadius: 10,
-                background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.25)",
-                display: "flex", justifyContent: "space-between", alignItems: "center"
-              }}>
-                <code style={{ color: "#a78bfa", fontSize: 15, fontWeight: 600 }}>{shortLinkDisplay}</code>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>automático</span>
+          {/* Card Inicial: Website Input */}
+          <div style={{
+            backgroundColor: "#ffffff", border: "1px solid #e2e8f0",
+            borderRadius: 12, padding: 24, marginBottom: 32,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+                <Globe size={20} color="#0284c7" /> Website
               </div>
+              <span style={{ fontSize: 12, color: "#0284c7", fontWeight: 600, cursor: "pointer" }}>Bulk Create from CSV</span>
             </div>
-
-            <button onClick={handleNext} disabled={!label.trim() || !targetUrl.trim()} style={{
-              width: "100%", padding: "13px", borderRadius: 10,
-              background: (!label.trim() || !targetUrl.trim()) ? "var(--border)" : "linear-gradient(135deg, #7c3aed, #6d28d9)",
-              color: "white", border: "none", fontSize: 15, fontWeight: 700, cursor: "pointer"
-            }}>
-              Próximo →
-            </button>
-          </div>
-        )}
-
-        {/* STEP 2 — NEGÓCIO */}
-        {step === 2 && (
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>2. Vincular negócio</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 28 }}>
-              Identifique o estabelecimento para agrupar as métricas
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
+              Create this QR Code type to link to your website, any Google URL or document, your social media profile or any other page on the web.
             </p>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Nome da empresa ou local</label>
-              <input
-                value={business} onChange={e => setBusiness(e.target.value)}
-                placeholder="Ex: Restaurante Sabor & Arte"
-                style={inputStyle}
-              />
-            </div>
 
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => setStep(1)} style={{
-                flex: 1, padding: "13px", borderRadius: 10, background: "var(--bg)",
-                border: "1px solid var(--border-bright)", color: "var(--text-muted)", cursor: "pointer"
-              }}>← Voltar</button>
-              <button onClick={handleNext} style={{
-                flex: 2, padding: "13px", borderRadius: 10,
-                background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-                color: "white", border: "none", fontSize: 15, fontWeight: 700, cursor: "pointer"
-              }}>Personalizar Design 🎨 →</button>
+              <input
+                value={targetUrl}
+                onChange={e => setTargetUrl(e.target.value)}
+                placeholder="https://www.your-website.com"
+                style={{
+                  flex: 1, padding: "12px 16px", borderRadius: 8,
+                  border: "1px solid #cbd5e1", fontSize: 14, outline: "none"
+                }}
+              />
+              <button
+                onClick={handleCreateType}
+                style={{
+                  padding: "12px 24px", borderRadius: 8, border: "none",
+                  backgroundColor: "#0284c7", color: "#ffffff", fontWeight: 700,
+                  fontSize: 14, cursor: "pointer"
+                }}
+              >
+                CREATE
+              </button>
             </div>
           </div>
-        )}
 
-        {/* STEP 3 — PERSONALIZAÇÃO VISUAL */}
-        {step === 3 && (
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>3. Personalização Visual</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 24 }}>
-              Escolha as cores, o ícone central e o estilo da moldura
-            </p>
+          <div style={{ textAlign: "center", margin: "24px 0", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>
+            or select from more Dynamic Code types
+          </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 24, alignItems: "start" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-                {/* Cores */}
-                <div>
-                  <label style={labelStyle}>Estilo de Cores</label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                    {COLOR_PRESETS.map((p, idx) => (
-                      <button key={idx} onClick={() => setSelectedColor(p)} style={{
-                        padding: "10px", borderRadius: 10,
-                        background: p.bg === "#ffffff" ? "#1a1a24" : "#0d0d12",
-                        border: selectedColor.name === p.name ? "2px solid #7c3aed" : "1px solid var(--border)",
-                        display: "flex", alignItems: "center", gap: 8, cursor: "pointer"
-                      }}>
-                        <div style={{ width: 18, height: 18, borderRadius: "50%", background: p.color, border: "1px solid rgba(255,255,255,0.2)" }} />
-                        <span style={{ fontSize: 12, color: "var(--text)", fontWeight: 500 }}>{p.name}</span>
-                      </button>
-                    ))}
+          {/* Grid de Tipos (QRCG Style) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+            {CONTENT_TYPES.slice(1).map(type => {
+              const Icon = type.icon;
+              return (
+                <div
+                  key={type.id}
+                  onClick={() => {
+                    setSelectedType(type.id);
+                    setStep(2);
+                  }}
+                  style={{
+                    backgroundColor: "#ffffff", border: "1px solid #e2e8f0",
+                    borderRadius: 12, padding: 18, cursor: "pointer",
+                    display: "flex", alignItems: "flex-start", gap: 14,
+                    transition: "all 0.15s ease", boxShadow: "0 1px 2px rgba(0,0,0,0.03)"
+                  }}
+                >
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 8, backgroundColor: "#f0f9ff",
+                    display: "flex", alignItems: "center", justifyContent: "center"
+                  }}>
+                    <Icon size={20} color="#0284c7" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{type.title}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{type.desc}</div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-                {/* Ícones */}
-                <div>
-                  <label style={labelStyle}>Ícone Central</label>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    {ICONS.map(icon => (
-                      <button key={icon.id} onClick={() => setSelectedIcon(icon.id)} style={{
-                        flex: 1, padding: "10px", borderRadius: 10,
-                        background: selectedIcon === icon.id ? "rgba(124,58,237,0.15)" : "var(--bg)",
-                        border: selectedIcon === icon.id ? "1px solid #7c3aed" : "1px solid var(--border)",
-                        color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                        display: "flex", flexDirection: "column", alignItems: "center", gap: 6
-                      }}>
-                        {icon.svg ? (
-                          <div dangerouslySetInnerHTML={{ __html: icon.svg }} />
-                        ) : (
-                          <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>🚫</div>
-                        )}
-                        <span>{icon.label}</span>
-                      </button>
-                    ))}
-                  </div>
+      {/* PASSO 2: CUSTOMIZE QR CODE (Editor Split-Screen Réplica QRCG) */}
+      {step === 2 && (
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", marginBottom: 24 }}>
+            Customize QR Code
+          </h1>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 32, alignItems: "start" }}>
+            {/* COLUNA ESQUERDA: OPÇÕES DE CUSTOMIZAÇÃO */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+              {/* 1. FRAMES (Molduras) */}
+              <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
+                  FRAMES
+                </h3>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+                  {[
+                    { id: "none", label: "No Frame" },
+                    { id: "bottom_banner", label: "Bottom Banner" },
+                    { id: "badge", label: "Badge Scan Me" },
+                    { id: "top_banner", label: "Top Banner" }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setFrameStyle(f.id as any)}
+                      style={{
+                        padding: "12px 8px", borderRadius: 10,
+                        border: frameStyle === f.id ? "2px solid #0284c7" : "1px solid #cbd5e1",
+                        backgroundColor: frameStyle === f.id ? "#f0f9ff" : "#ffffff",
+                        color: frameStyle === f.id ? "#0284c7" : "#475569",
+                        fontSize: 12, fontWeight: 700, cursor: "pointer"
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Moldura */}
-                <div>
-                  <label style={labelStyle}>Estilo da Moldura (Frame)</label>
-                  <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-                    {[
-                      { id: "badge", label: "Etiqueta SCAN ME" },
-                      { id: "banner", label: "Banner Sólido" },
-                      { id: "simple", label: "Texto Simples" }
-                    ].map(f => (
-                      <button key={f.id} onClick={() => setCtaFrame(f.id as any)} style={{
-                        flex: 1, padding: "10px", borderRadius: 8,
-                        background: ctaFrame === f.id ? "rgba(124,58,237,0.15)" : "var(--bg)",
-                        border: ctaFrame === f.id ? "1px solid #7c3aed" : "1px solid var(--border)",
-                        color: "var(--text)", fontSize: 12, fontWeight: 600, cursor: "pointer"
-                      }}>{f.label}</button>
-                    ))}
+                {frameStyle !== "none" && (
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>
+                      FRAME TEXT
+                    </label>
+                    <input
+                      value={frameText}
+                      onChange={e => setFrameText(e.target.value)}
+                      placeholder="SCAN ME"
+                      style={{
+                        width: "100%", padding: "10px 14px", borderRadius: 8,
+                        border: "1px solid #cbd5e1", fontSize: 13, outline: "none", boxSizing: "border-box"
+                      }}
+                    />
                   </div>
-
-                  <input
-                    value={ctaText} onChange={e => setCtaText(e.target.value)}
-                    placeholder="Texto da moldura (ex: SCAN ME)"
-                    style={inputStyle}
-                  />
-                </div>
-
+                )}
               </div>
 
-              {/* PREVIEW DA MOLDURA */}
+              {/* 2. LOGOS */}
+              <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
+                  LOGOS
+                </h3>
+
+                <div style={{ display: "flex", gap: 12 }}>
+                  {LOGO_PRESETS.map(logo => (
+                    <button
+                      key={logo.id}
+                      onClick={() => setSelectedLogo(logo.id)}
+                      style={{
+                        width: 60, height: 60, borderRadius: 10,
+                        border: selectedLogo === logo.id ? "2px solid #0284c7" : "1px solid #cbd5e1",
+                        backgroundColor: selectedLogo === logo.id ? "#f0f9ff" : "#ffffff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer"
+                      }}
+                      title={logo.label}
+                    >
+                      {logo.svg ? (
+                        <div dangerouslySetInnerHTML={{ __html: logo.svg }} />
+                      ) : (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8" }}>🚫</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. SHAPES (Formatos dos Pontos) */}
+              <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
+                  SHAPES
+                </h3>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                  {[
+                    { id: "square", label: "Squares" },
+                    { id: "rounded", label: "Rounded" },
+                    { id: "dots", label: "Dots" },
+                    { id: "classy", label: "Classy" }
+                  ].map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => setShape(s.id as any)}
+                      style={{
+                        padding: "12px", borderRadius: 10,
+                        border: shape === s.id ? "2px solid #0284c7" : "1px solid #cbd5e1",
+                        backgroundColor: shape === s.id ? "#f0f9ff" : "#ffffff",
+                        color: shape === s.id ? "#0284c7" : "#475569",
+                        fontSize: 13, fontWeight: 700, cursor: "pointer"
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. CORNERS (Cantos/Olhos) */}
+              <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
+                  CORNERS
+                </h3>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                  {[
+                    { id: "square", label: "Square" },
+                    { id: "rounded", label: "Rounded" },
+                    { id: "circle", label: "Circle" },
+                    { id: "leaf", label: "Leaf" }
+                  ].map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => setCornerStyle(c.id as any)}
+                      style={{
+                        padding: "12px", borderRadius: 10,
+                        border: cornerStyle === c.id ? "2px solid #0284c7" : "1px solid #cbd5e1",
+                        backgroundColor: cornerStyle === c.id ? "#f0f9ff" : "#ffffff",
+                        color: cornerStyle === c.id ? "#0284c7" : "#475569",
+                        fontSize: 13, fontWeight: 700, cursor: "pointer"
+                      }}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 5. COLORS (Cores) */}
+              <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 16px 0" }}>
+                  COLORS
+                </h3>
+
+                <div style={{ display: "flex", gap: 24 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>
+                      QR CODE COLOR
+                    </label>
+                    <input
+                      type="color"
+                      value={qrColor}
+                      onChange={e => setQrColor(e.target.value)}
+                      style={{ width: 44, height: 44, border: "none", cursor: "pointer", borderRadius: 6 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>
+                      BACKGROUND COLOR
+                    </label>
+                    <input
+                      type="color"
+                      value={bgColor}
+                      onChange={e => setBgColor(e.target.value)}
+                      style={{ width: 44, height: 44, border: "none", cursor: "pointer", borderRadius: 6 }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* COLUNA DIREITA: LIVE PREVIEW FIXO (Estilo QRCG) */}
+            <div style={{ position: "sticky", top: 32 }}>
               <div style={{
-                background: selectedColor.bg, padding: 16, borderRadius: 16,
-                border: "2px solid var(--border-bright)", textAlign: "center",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+                backgroundColor: "#ffffff", border: "1px solid #e2e8f0",
+                borderRadius: 16, padding: 32, textAlign: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
               }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", marginBottom: 10 }}>
-                  Pré-visualização
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 20 }}>
+                  PREVIEW
                 </div>
 
-                <div style={{
-                  position: "relative", width: 180, height: 180, margin: "0 auto",
-                  background: selectedColor.bg, display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRadius: 12, border: `2px solid ${selectedColor.color}`
-                }}>
-                  <div style={{
-                    width: 150, height: 150,
-                    backgroundImage: `radial-gradient(${selectedColor.color} 2px, transparent 2px)`,
-                    backgroundSize: "8px 8px"
-                  }} />
-
-                  {selectedIcon !== "none" && (
-                    <div style={{
-                      position: "absolute", width: 42, height: 42, borderRadius: "50%",
-                      background: selectedColor.bg, border: `2px solid ${selectedColor.color}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
-                    }}>
-                      <div dangerouslySetInnerHTML={{ __html: ICONS.find(i => i.id === selectedIcon)?.svg || "" }} />
-                    </div>
-                  )}
+                {/* Canvas de Renderização */}
+                <div style={{ display: "inline-block", padding: 12, backgroundColor: "#ffffff", borderRadius: 12, marginBottom: 20 }}>
+                  <canvas ref={canvasRef} style={{ display: "block", maxWidth: "100%", height: "auto" }} />
                 </div>
 
-                <div style={{ marginTop: 14 }}>
-                  {ctaFrame === "badge" && (
-                    <div style={{
-                      display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px",
-                      borderRadius: 20, background: selectedColor.color, color: "#fff",
-                      fontSize: 12, fontWeight: 800, letterSpacing: "0.5px"
-                    }}>
-                      <span>📱</span> {ctaText || "SCAN ME"}
-                    </div>
-                  )}
-                  {ctaFrame === "banner" && (
-                    <div style={{
-                      padding: "8px", borderRadius: 8, background: selectedColor.color,
-                      color: "#fff", fontSize: 13, fontWeight: 800, textTransform: "uppercase"
-                    }}>
-                      {ctaText || "SCAN ME"}
-                    </div>
-                  )}
-                  {ctaFrame === "simple" && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: selectedColor.color }}>
-                      {ctaText || "SCAN ME"}
-                    </div>
-                  )}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+                  <button
+                    onClick={() => {
+                      setFrameStyle("bottom_banner");
+                      setFrameText("SCAN ME");
+                      setSelectedLogo("web");
+                      setShape("square");
+                      setCornerStyle("square");
+                      setQrColor("#000000");
+                      setBgColor("#ffffff");
+                    }}
+                    style={{
+                      border: "none", background: "none", color: "#64748b",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4
+                    }}
+                  >
+                    <RotateCcw size={14} /> RESET DESIGN
+                  </button>
                 </div>
+
+                <button
+                  onClick={handleCompleteCode}
+                  style={{
+                    width: "100%", padding: "14px", borderRadius: 8, border: "none",
+                    backgroundColor: "#0284c7", color: "#ffffff", fontSize: 14, fontWeight: 800,
+                    cursor: "pointer", boxShadow: "0 4px 12px rgba(2,132,199,0.2)"
+                  }}
+                >
+                  COMPLETE YOUR CODE
+                </button>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 32 }}>
-              <button onClick={() => setStep(2)} style={{
-                flex: 1, padding: "13px", borderRadius: 10, background: "var(--bg)",
-                border: "1px solid var(--border-bright)", color: "var(--text-muted)", cursor: "pointer"
-              }}>← Voltar</button>
-              <button onClick={handleNext} style={{
-                flex: 2, padding: "13px", borderRadius: 10,
-                background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-                color: "white", border: "none", fontSize: 15, fontWeight: 700, cursor: "pointer"
-              }}>Salvar e Gerar QR Code →</button>
-            </div>
           </div>
-        )}
-
-        {/* STEP 4 — SUCESSO E DOWNLOAD */}
-        {step === 4 && (
-          <div style={{ textAlign: "center" }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              width: 54, height: 54, borderRadius: 16,
-              background: "rgba(16,185,129,0.15)", color: "#10b981", fontSize: 26, marginBottom: 16
-            }}>
-              ✓
-            </div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>QR Code Salvo com Sucesso!</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 28 }}>
-              <strong style={{ color: "var(--text)" }}>{label}</strong> • {shortLinkDisplay}
-            </p>
-
-            <div style={{
-              display: "inline-block", padding: 24, borderRadius: 24,
-              background: selectedColor.bg, border: `2px solid ${selectedColor.color}`,
-              marginBottom: 28, boxShadow: `0 0 50px ${selectedColor.color}33`, position: "relative"
-            }}>
-              <div style={{ position: "relative", display: "inline-block" }}>
-                <canvas ref={canvasRef} style={{ display: "block", borderRadius: 12 }} />
-
-                {selectedIcon !== "none" && (
-                  <div style={{
-                    position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-                    width: 52, height: 52, borderRadius: "50%", background: selectedColor.bg,
-                    border: `3px solid ${selectedColor.color}`, display: "flex", alignItems: "center",
-                    justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.4)"
-                  }}>
-                    <div dangerouslySetInnerHTML={{ __html: ICONS.find(i => i.id === selectedIcon)?.svg || "" }} />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginTop: 16 }}>
-                {ctaFrame === "badge" && (
-                  <div style={{
-                    display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 20px",
-                    borderRadius: 30, background: selectedColor.color, color: "#fff",
-                    fontSize: 14, fontWeight: 800, letterSpacing: "0.5px"
-                  }}>
-                    <span>📱</span> {ctaText || "SCAN ME"}
-                  </div>
-                )}
-                {ctaFrame === "banner" && (
-                  <div style={{
-                    padding: "10px", borderRadius: 10, background: selectedColor.color,
-                    color: "#fff", fontSize: 14, fontWeight: 800, textTransform: "uppercase"
-                  }}>
-                    {ctaText || "SCAN ME"}
-                  </div>
-                )}
-                {ctaFrame === "simple" && (
-                  <div style={{ fontSize: 14, fontWeight: 800, color: selectedColor.color }}>
-                    {ctaText || "SCAN ME"}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 24 }}>
-              <button onClick={() => {
-                const link = document.createElement("a");
-                link.download = `qr-${slug}.png`;
-                link.href = canvasRef.current?.toDataURL() || "";
-                link.click();
-              }} style={{
-                padding: "12px 24px", borderRadius: 10,
-                background: "var(--bg)", border: "1px solid var(--border-bright)",
-                color: "var(--text)", fontSize: 14, fontWeight: 700, cursor: "pointer"
-              }}>⬇ Baixar PNG</button>
-
-              <button onClick={() => navigator.clipboard.writeText(fullShortUrl)} style={{
-                padding: "12px 24px", borderRadius: 10,
-                background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)",
-                color: "#a78bfa", fontSize: 14, fontWeight: 700, cursor: "pointer"
-              }}>📋 Copiar Link Curto</button>
-            </div>
-
-            <button onClick={() => router.push("/dashboard/codes")} style={{
-              width: "100%", padding: "14px", borderRadius: 10,
-              background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-              color: "white", border: "none", fontSize: 15, fontWeight: 700,
-              cursor: "pointer", boxShadow: "0 0 20px rgba(124,58,237,0.3)"
-            }}>Ver Todos Meus QR Codes →</button>
-          </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 }

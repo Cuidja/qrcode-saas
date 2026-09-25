@@ -3,49 +3,61 @@ export interface QRCodeItem {
   label: string;
   slug: string;
   target_url: string;
+  type: "website" | "vcard" | "pdf" | "social" | "google_reviews" | "wifi" | "feedback";
   business_name?: string;
   color: string;
   bg_color: string;
   icon: string;
-  cta_frame: "badge" | "banner" | "simple";
+  shape: "square" | "rounded" | "dots" | "classy";
+  corner_style: "square" | "rounded" | "circle" | "leaf";
+  cta_frame: "none" | "badge" | "top_banner" | "bottom_banner";
   cta_text: string;
   scans: number;
   active: boolean;
+  expires_at?: string;
   created_at: string;
 }
 
-const STORAGE_KEY = "qrhub_codes_store";
+const STORAGE_KEY = "qrhub_codes_store_v2";
 
 export const INITIAL_MOCK_CODES: QRCodeItem[] = [
   {
     id: "1",
-    label: "Placa Mesa 01 - Restaurante",
-    slug: "rest-ctr",
-    target_url: "https://g.page/r/seu-negocio/review",
-    business_name: "Restaurante Bom Sabor",
-    color: "#2563eb",
+    label: "https://cuidja.com",
+    slug: "bh1ukN",
+    target_url: "https://cuidja.com",
+    type: "website",
+    business_name: "Cuidja Tech",
+    color: "#0f172a",
     bg_color: "#ffffff",
-    icon: "google",
-    cta_frame: "banner",
-    cta_text: "SCAN ME",
-    scans: 247,
+    icon: "none",
+    shape: "square",
+    corner_style: "square",
+    cta_frame: "bottom_banner",
+    cta_text: "Scan Me",
+    scans: 0,
     active: true,
-    created_at: "10/09/2026"
+    expires_at: "Expires in 13 days",
+    created_at: "Sep 24, 2026"
   },
   {
     id: "2",
-    label: "Balcão Atendimento",
-    slug: "lj-bvista",
-    target_url: "https://instagram.com/modafashion",
-    business_name: "Moda Fashion Store",
-    color: "#7c3aed",
+    label: "https://cuidja.com/lead",
+    slug: "bh1ui8",
+    target_url: "https://cuidja.com/lead",
+    type: "website",
+    business_name: "Cuidja Leads",
+    color: "#0284c7",
     bg_color: "#ffffff",
-    icon: "star",
-    cta_frame: "badge",
-    cta_text: "AVALIE AQUI",
-    scans: 89,
+    icon: "google",
+    shape: "rounded",
+    corner_style: "rounded",
+    cta_frame: "bottom_banner",
+    cta_text: "Scan Me",
+    scans: 2,
     active: true,
-    created_at: "08/09/2026"
+    expires_at: "Expires in 13 days",
+    created_at: "Sep 24, 2026"
   }
 ];
 
@@ -83,7 +95,7 @@ export function saveCodeItem(item: QRCodeItem): QRCodeItem[] {
 
 export function updateCodeTarget(id: string, newTarget: string): QRCodeItem[] {
   const current = getStoredCodes();
-  const updated = current.map(c => c.id === id ? { ...c, target_url: newTarget } : c);
+  const updated = current.map(c => c.id === id ? { ...c, target_url: newTarget, label: newTarget } : c);
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
@@ -93,6 +105,15 @@ export function updateCodeTarget(id: string, newTarget: string): QRCodeItem[] {
 export function toggleCodeActive(id: string): QRCodeItem[] {
   const current = getStoredCodes();
   const updated = current.map(c => c.id === id ? { ...c, active: !c.active } : c);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+export function deleteCodeItem(id: string): QRCodeItem[] {
+  const current = getStoredCodes();
+  const updated = current.filter(c => c.id !== id);
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }

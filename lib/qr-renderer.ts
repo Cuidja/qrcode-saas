@@ -1,5 +1,24 @@
 import QRCode from "qrcode";
 
+export const LOGO_PRESETS = [
+  { id: "none", label: "Nenhum", svg: null },
+  {
+    id: "web",
+    label: "Web / Globo",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="#0284c7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>`
+  },
+  {
+    id: "google",
+    label: "Google",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>`
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="#25D366"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>`
+  }
+];
+
 export interface QRRenderOptions {
   text: string;
   width?: number;
@@ -9,7 +28,7 @@ export interface QRRenderOptions {
   cornerStyle?: "square" | "rounded" | "circle" | "leaf";
   frameStyle?: "none" | "badge" | "top_banner" | "bottom_banner" | "phone";
   frameText?: string;
-  logoUrl?: string | null;
+  logoId?: string | null;
   logoSvg?: string | null;
 }
 
@@ -29,8 +48,11 @@ export async function renderCustomQRCode(
     cornerStyle = "square",
     frameStyle = "bottom_banner",
     frameText = "SCAN ME",
-    logoSvg = null
+    logoId = null,
+    logoSvg: providedSvg = null
   } = options;
+
+  const targetLogoSvg = providedSvg || (logoId ? (LOGO_PRESETS.find(l => l.id === logoId)?.svg || null) : null);
 
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -154,7 +176,7 @@ export async function renderCustomQRCode(
   });
 
   // 5. Desenhar Ícone / Logo no Centro
-  if (logoSvg) {
+  if (targetLogoSvg) {
     const logoSize = qrSize * 0.22;
     const logoX = qrOffsetX + (qrSize - logoSize) / 2;
     const logoY = qrOffsetY + (qrSize - logoSize) / 2;
@@ -171,7 +193,7 @@ export async function renderCustomQRCode(
 
     // Renderizar SVG da Logo
     const img = new Image();
-    const svgBlob = new Blob([logoSvg], { type: "image/svg+xml;charset=utf-8" });
+    const svgBlob = new Blob([targetLogoSvg], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
 
     await new Promise((resolve) => {

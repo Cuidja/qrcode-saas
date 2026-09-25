@@ -37,7 +37,8 @@ function QRThumbnail({ code }: { code: QRCodeItem }) {
         shape: code.shape || "square",
         cornerStyle: code.corner_style || "square",
         frameStyle: code.cta_frame || "bottom_banner",
-        frameText: code.cta_text || "Scan Me"
+        frameText: code.cta_text || "Scan Me",
+        logoId: code.icon || "none"
       });
     }
   }, [code]);
@@ -336,6 +337,40 @@ export default function CodesPage() {
                 >
                   <Palette size={16} color="#475569" />
                 </Link>
+
+                <button
+                  onClick={() => {
+                    const tempCanvas = document.createElement("canvas");
+                    const baseUrl = typeof window !== "undefined"
+                      ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+                      : "http://localhost:3000";
+
+                    renderCustomQRCode(tempCanvas, {
+                      text: `${baseUrl}/r/${code.slug}`,
+                      width: 400,
+                      color: code.color || "#0f172a",
+                      bgColor: code.bg_color || "#ffffff",
+                      shape: code.shape || "square",
+                      cornerStyle: code.corner_style || "square",
+                      frameStyle: code.cta_frame || "bottom_banner",
+                      frameText: code.cta_text || "Scan Me",
+                      logoId: code.icon || "none"
+                    }).then(() => {
+                      const a = document.createElement("a");
+                      a.download = `qrcode-${code.slug}.png`;
+                      a.href = tempCanvas.toDataURL("image/png");
+                      a.click();
+                    });
+                  }}
+                  title="Download PNG Alta Resolução"
+                  style={{
+                    width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0",
+                    backgroundColor: "#ffffff", cursor: "pointer", display: "flex",
+                    alignItems: "center", justifyContent: "center"
+                  }}
+                >
+                  <Download size={16} color="#0284c7" />
+                </button>
 
                 <button
                   onClick={() => handleDelete(code.id)}

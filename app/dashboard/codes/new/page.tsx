@@ -109,7 +109,7 @@ export default function NewCodePage() {
         cornerStyle: cornerStyle,
         frameStyle: frameStyle,
         frameText: frameText,
-        logoSvg: logoSvg
+        logoId: selectedLogo
       });
     }
   }, [step, targetUrl, slug, frameStyle, frameText, selectedLogo, shape, cornerStyle, qrColor, bgColor]);

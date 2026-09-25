@@ -25,8 +25,12 @@ function QRThumbnail({ code }: { code: QRCodeItem }) {
 
   useEffect(() => {
     if (canvasRef.current) {
+      const baseUrl = typeof window !== "undefined"
+        ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+        : "http://localhost:3000";
+
       renderCustomQRCode(canvasRef.current, {
-        text: `https://qrhub.io/r/${code.slug}`,
+        text: `${baseUrl}/r/${code.slug}`,
         width: 100,
         color: code.color || "#0f172a",
         bgColor: code.bg_color || "#ffffff",
@@ -64,8 +68,16 @@ export default function CodesPage() {
     setCodes(getStoredCodes());
   }, []);
 
+  const getAppBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      return process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    }
+    return "http://localhost:3000";
+  };
+
   const handleCopyLink = (code: QRCodeItem) => {
-    navigator.clipboard.writeText(`https://qrhub.io/r/${code.slug}`);
+    const fullUrl = `${getAppBaseUrl()}/r/${code.slug}`;
+    navigator.clipboard.writeText(fullUrl);
     setCopiedId(code.id);
     setTimeout(() => setCopiedId(null), 2000);
   };

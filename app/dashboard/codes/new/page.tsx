@@ -88,7 +88,12 @@ export default function NewCodePage() {
     setSlug(generateSlug());
   }, []);
 
-  const shortLink = `qrhub.io/r/${slug}`;
+  const baseUrl = typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+    : "http://localhost:3000";
+
+  const shortLink = `${baseUrl}/r/${slug}`;
+  const shortLinkDisplay = shortLink.replace(/^https?:\/\//, "");
 
   // Renderizar o QR Code em tempo real no Canvas sempre que qualquer propriedade mudar
   useEffect(() => {
@@ -96,7 +101,7 @@ export default function NewCodePage() {
       const logoSvg = LOGO_PRESETS.find(l => l.id === selectedLogo)?.svg || null;
 
       renderCustomQRCode(canvasRef.current, {
-        text: `https://${shortLink}`,
+        text: shortLink,
         width: 260,
         color: qrColor,
         bgColor: bgColor,

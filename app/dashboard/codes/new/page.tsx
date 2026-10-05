@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { renderCustomQRCode } from "@/lib/qr-renderer";
 import { saveCodeItem, QRCodeItem } from "@/lib/codes-store";
+import { validateTargetUrl } from "@/lib/url-validation";
 
 function generateSlug(len = 6) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -72,8 +73,10 @@ export default function NewCodePage() {
 
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedType, setSelectedType] = useState<string>("website");
-  const [targetUrl, setTargetUrl] = useState("https://www.website.com");
+  const [targetUrl, setTargetUrl] = useState("");
   const [slug, setSlug] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Estúdio de Design (Shapes, Frames, Corners, Colors)
   const [frameStyle, setFrameStyle] = useState<"none" | "badge" | "top_banner" | "bottom_banner">("bottom_banner");
@@ -115,17 +118,33 @@ export default function NewCodePage() {
   }, [step, targetUrl, slug, frameStyle, frameText, selectedLogo, shape, cornerStyle, qrColor, bgColor]);
 
   const handleCreateType = () => {
-    if (!targetUrl.trim()) return;
+    const check = validateTargetUrl(targetUrl);
+    if (!check.ok) {
+      setFormError(check.error);
+      return;
+    }
+    setFormError(null);
+    setTargetUrl(check.url);
     setStep(2);
   };
 
   const handleCompleteCode = async () => {
-    const newItem: QRCodeItem = {
-      id: Date.now().toString(),
-      label: targetUrl,
+    if (saving) return;
+
+    const check = validateTargetUrl(targetUrl);
+    if (!check.ok) {
+      setFormError(check.error);
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+
+    const result = await saveCodeItem({
+      label: check.url,
       slug: slug,
-      target_url: targetUrl,
-      type: selectedType as any,
+      target_url: check.url,
+      type: selectedType as QRCodeItem["type"],
       color: qrColor,
       bg_color: bgColor,
       icon: selectedLogo,
@@ -133,12 +152,18 @@ export default function NewCodePage() {
       corner_style: cornerStyle,
       cta_frame: frameStyle,
       cta_text: frameText,
-      scans: 0,
       active: true,
-      created_at: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    };
+    });
 
-    await saveCodeItem(newItem);
+    setSaving(false);
+
+    if (result.error || !result.created) {
+      // Mantém o formulário aberto: nada foi gravado no banco.
+      if (result.error?.includes("slug")) setSlug(generateSlug());
+      setFormError(result.error ?? "Não foi possível salvar o QR Code.");
+      return;
+    }
+
     router.push("/dashboard/codes");
   };
 
@@ -205,6 +230,11 @@ export default function NewCodePage() {
                 CREATE
               </button>
             </div>
+            {formError && (
+              <div role="alert" style={{ marginTop: 10, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+                {formError}
+              </div>
+            )}
           </div>
 
           <div style={{ textAlign: "center", margin: "24px 0", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>
@@ -220,13 +250,8 @@ export default function NewCodePage() {
                   key={type.id}
                   onClick={() => {
                     setSelectedType(type.id);
-                    setTargetUrl(
-                      type.id === "instagram" ? "https://instagram.com/seu-perfil" :
-                      type.id === "pdf" ? "https://seusite.com/documento.pdf" :
-                      type.id === "vcard" ? "https://qrhub.io/vcard" :
-                      type.id === "rating" ? "https://g.page/r/seu-negocio/review" :
-                      "https://www.your-website.com"
-                    );
+                    setTargetUrl("");
+                    setFormError(null);
                     setStep(2);
                   }}
                   style={{
@@ -292,6 +317,11 @@ export default function NewCodePage() {
                     border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box"
                   }}
                 />
+                {formError && (
+                  <div role="alert" style={{ marginTop: 10, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+                    {formError}
+                  </div>
+                )}
               </div>
 
               {/* 1. FRAMES (Molduras) */}
@@ -504,13 +534,14 @@ export default function NewCodePage() {
 
                 <button
                   onClick={handleCompleteCode}
+                  disabled={saving}
                   style={{
                     width: "100%", padding: "14px", borderRadius: 8, border: "none",
-                    backgroundColor: "#0284c7", color: "#ffffff", fontSize: 14, fontWeight: 800,
-                    cursor: "pointer", boxShadow: "0 4px 12px rgba(2,132,199,0.2)"
+                    backgroundColor: saving ? "#7dd3fc" : "#0284c7", color: "#ffffff", fontSize: 14, fontWeight: 800,
+                    cursor: saving ? "wait" : "pointer", boxShadow: "0 4px 12px rgba(2,132,199,0.2)"
                   }}
                 >
-                  COMPLETE YOUR CODE
+                  {saving ? "SAVING..." : "COMPLETE YOUR CODE"}
                 </button>
               </div>
             </div>

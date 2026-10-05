@@ -1,4 +1,5 @@
 import { createClient } from "./supabase/client";
+import { validateTargetUrl } from "./url-validation";
 
 export interface QRCodeItem {
   id: string;
@@ -20,104 +21,105 @@ export interface QRCodeItem {
   created_at: string;
 }
 
-const STORAGE_KEY = "qrhub_codes_store_v2";
-
-export const INITIAL_MOCK_CODES: QRCodeItem[] = [
-  {
-    id: "1",
-    label: "https://cuidja.com",
-    slug: "bh1ukN",
-    target_url: "https://cuidja.com",
-    type: "website",
-    business_name: "Cuidja Tech",
-    color: "#0f172a",
-    bg_color: "#ffffff",
-    icon: "none",
-    shape: "square",
-    corner_style: "square",
-    cta_frame: "bottom_banner",
-    cta_text: "Scan Me",
-    scans: 0,
-    active: true,
-    created_at: "Sep 24, 2026"
-  }
-];
-
-export async function getStoredCodes(): Promise<QRCodeItem[]> {
-  if (typeof window === "undefined") return INITIAL_MOCK_CODES;
-
-  let localItems: QRCodeItem[] = [];
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      localItems = JSON.parse(data);
-    }
-  } catch {
-    // fallback
-  }
-
-  try {
-    const supabase = createClient();
-    const { data: dbCodes, error } = await supabase.from("codes").select("*").order("created_at", { ascending: false });
-
-    if (dbCodes && dbCodes.length > 0 && !error) {
-      const mapped: QRCodeItem[] = dbCodes.map(c => ({
-        id: c.id,
-        label: c.label || c.target_url,
-        slug: c.slug,
-        target_url: c.target_url,
-        type: c.type || "website",
-        color: c.color || "#000000",
-        bg_color: c.bg_color || "#ffffff",
-        icon: c.icon || "none",
-        shape: c.shape || "square",
-        corner_style: c.corner_style || "square",
-        cta_frame: c.cta_frame || "bottom_banner",
-        cta_text: c.cta_text || "SCAN ME",
-        scans: c.scans_count || 0,
-        active: c.active !== false,
-        created_at: c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Sep 24, 2026"
-      }));
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
-      return mapped;
-    }
-  } catch (e) {
-    console.warn("Usando cache local para listagem de QR codes:", e);
-  }
-
-  if (localItems.length === 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_MOCK_CODES));
-    return INITIAL_MOCK_CODES;
-  }
-
-  return localItems;
+/**
+ * Resultado de toda operação do store.
+ * - `error === null`: a operação foi confirmada pelo Supabase.
+ * - `error !== null`: a operação NÃO foi persistida; `codes` traz o estado real atual do banco
+ *   (ou uma lista vazia se nem a leitura foi possível).
+ *
+ * O Supabase é a única fonte da verdade: não há mais cache em localStorage nem registro fictício,
+ * para que a interface nunca mostre como "salvo" algo que não está no banco.
+ */
+export interface StoreResult {
+  codes: QRCodeItem[];
+  error: string | null;
 }
 
-// Salva localmente E sincroniza assincronamente com o banco de dados Supabase
-export async function saveCodeItem(item: QRCodeItem): Promise<QRCodeItem[]> {
-  const current = await getStoredCodes();
-  const existingIdx = current.findIndex(c => c.id === item.id);
-  let updated: QRCodeItem[];
+export interface CreateResult extends StoreResult {
+  created: QRCodeItem | null;
+}
 
-  if (existingIdx >= 0) {
-    updated = [...current];
-    updated[existingIdx] = item;
-  } else {
-    updated = [item, ...current];
-  }
+const SUPABASE_NOT_CONFIGURED = "Supabase não está configurado neste ambiente.";
 
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbRow = Record<string, any>;
 
-  // Tentar persistir no banco Supabase
+function mapRow(c: DbRow): QRCodeItem {
+  return {
+    id: c.id,
+    label: c.label || c.target_url,
+    slug: c.slug,
+    target_url: c.target_url,
+    type: c.type || "website",
+    color: c.color || "#000000",
+    bg_color: c.bg_color || "#ffffff",
+    icon: c.icon || "none",
+    shape: c.shape || "square",
+    corner_style: c.corner_style || "square",
+    cta_frame: c.cta_frame || "bottom_banner",
+    cta_text: c.cta_text || "SCAN ME",
+    scans: Number(c.scans_count) || 0,
+    active: c.active !== false,
+    created_at: c.created_at
+      ? new Date(c.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+      : "",
+  };
+}
+
+function describeError(error: { message?: string; code?: string } | null | undefined): string {
+  if (!error) return "Erro desconhecido.";
+  if (error.code === "23505") return "Já existe um QR Code com este slug. Gere outro e tente novamente.";
+  if (error.code === "42501") return "Sem permissão. Faça login novamente e tente de novo.";
+  if (error.code === "23514") return "Os dados enviados violam as regras do banco (verifique a URL e o slug).";
+  return error.message || "Erro ao falar com o Supabase.";
+}
+
+function getClient() {
   try {
-    const supabase = createClient();
-    await supabase.from("codes").upsert({
+    return createClient();
+  } catch {
+    return null;
+  }
+}
+
+/** Lê os QR Codes do usuário logado direto do banco. */
+export async function getStoredCodes(): Promise<StoreResult> {
+  const supabase = getClient();
+  if (!supabase) return { codes: [], error: SUPABASE_NOT_CONFIGURED };
+
+  const { data, error } = await supabase
+    .from("codes")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return { codes: [], error: describeError(error) };
+  return { codes: (data ?? []).map(mapRow), error: null };
+}
+
+async function failWith(message: string): Promise<StoreResult> {
+  const current = await getStoredCodes();
+  return { codes: current.codes, error: message };
+}
+
+/** Cria um QR Code. Só retorna sucesso depois que o Supabase confirmar a linha gravada. */
+export async function saveCodeItem(
+  item: Omit<QRCodeItem, "id" | "scans" | "created_at"> & Partial<Pick<QRCodeItem, "id" | "scans" | "created_at">>,
+): Promise<CreateResult> {
+  const supabase = getClient();
+  if (!supabase) return { codes: [], error: SUPABASE_NOT_CONFIGURED, created: null };
+
+  const target = validateTargetUrl(item.target_url);
+  if (!target.ok) {
+    const current = await getStoredCodes();
+    return { codes: current.codes, error: target.error, created: null };
+  }
+
+  const { data, error } = await supabase
+    .from("codes")
+    .insert({
       slug: item.slug,
-      target_url: item.target_url,
-      label: item.label,
+      target_url: target.url,
+      label: item.label?.trim() || target.url,
       type: item.type,
       active: item.active,
       color: item.color,
@@ -126,74 +128,95 @@ export async function saveCodeItem(item: QRCodeItem): Promise<QRCodeItem[]> {
       shape: item.shape,
       corner_style: item.corner_style,
       cta_frame: item.cta_frame,
-      cta_text: item.cta_text
-    }, { onConflict: "slug" });
-  } catch (e) {
-    console.warn("Sem conexão direta ao Supabase no momento, mantendo em cache local:", e);
+      cta_text: item.cta_text,
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    const current = await getStoredCodes();
+    return { codes: current.codes, error: describeError(error), created: null };
   }
 
-  return updated;
+  const current = await getStoredCodes();
+  return { codes: current.codes, error: current.error, created: mapRow(data) };
 }
 
-export async function updateCodeTarget(id: string, newTarget: string): Promise<QRCodeItem[]> {
-  const current = await getStoredCodes();
-  const itemToUpdate = current.find(c => c.id === id);
-  const updated = current.map(c => c.id === id ? { ...c, target_url: newTarget, label: newTarget } : c);
+/** Altera o destino. O slug (e portanto o QR impresso) não muda. */
+export async function updateCodeTarget(id: string, newTarget: string): Promise<StoreResult> {
+  const supabase = getClient();
+  if (!supabase) return { codes: [], error: SUPABASE_NOT_CONFIGURED };
 
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const target = validateTargetUrl(newTarget);
+  if (!target.ok) return failWith(target.error);
+
+  const { data: existing, error: readError } = await supabase
+    .from("codes")
+    .select("id, label, target_url")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (readError) return failWith(describeError(readError));
+  if (!existing) return failWith("QR Code não encontrado (ou você não tem permissão para editá-lo).");
+
+  // O rótulo só acompanha o destino se o usuário nunca o personalizou.
+  const labelFollowsTarget = !existing.label || existing.label === existing.target_url;
+  const patch: DbRow = { target_url: target.url, updated_at: new Date().toISOString() };
+  if (labelFollowsTarget) patch.label = target.url;
+
+  const { data: updatedRows, error } = await supabase
+    .from("codes")
+    .update(patch)
+    .eq("id", id)
+    .select("id");
+
+  if (error) return failWith(describeError(error));
+  if (!updatedRows || updatedRows.length === 0) {
+    return failWith("Nenhuma linha foi atualizada. Verifique se você ainda tem acesso a este QR Code.");
   }
 
-  if (itemToUpdate) {
-    try {
-      const supabase = createClient();
-      await supabase.from("codes").update({ target_url: newTarget, label: newTarget }).eq("slug", itemToUpdate.slug);
-    } catch (e) {
-      console.warn("Erro ao sincronizar update com Supabase:", e);
-    }
-  }
-
-  return updated;
+  return getStoredCodes();
 }
 
-export async function toggleCodeActive(id: string): Promise<QRCodeItem[]> {
-  const current = await getStoredCodes();
-  const itemToUpdate = current.find(c => c.id === id);
-  const updated = current.map(c => c.id === id ? { ...c, active: !c.active } : c);
+export async function toggleCodeActive(id: string): Promise<StoreResult> {
+  const supabase = getClient();
+  if (!supabase) return { codes: [], error: SUPABASE_NOT_CONFIGURED };
 
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  }
+  const { data: existing, error: readError } = await supabase
+    .from("codes")
+    .select("id, active")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (itemToUpdate) {
-    try {
-      const supabase = createClient();
-      await supabase.from("codes").update({ active: !itemToUpdate.active }).eq("slug", itemToUpdate.slug);
-    } catch (e) {
-      console.warn("Erro ao atualizar status no Supabase:", e);
-    }
-  }
+  if (readError) return failWith(describeError(readError));
+  if (!existing) return failWith("QR Code não encontrado.");
 
-  return updated;
+  const { data: updatedRows, error } = await supabase
+    .from("codes")
+    .update({ active: !existing.active, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("id");
+
+  if (error) return failWith(describeError(error));
+  if (!updatedRows || updatedRows.length === 0) return failWith("Nenhuma linha foi atualizada.");
+
+  return getStoredCodes();
 }
 
-export async function deleteCodeItem(id: string): Promise<QRCodeItem[]> {
-  const current = await getStoredCodes();
-  const itemToDelete = current.find(c => c.id === id);
-  const updated = current.filter(c => c.id !== id);
+export async function deleteCodeItem(id: string): Promise<StoreResult> {
+  const supabase = getClient();
+  if (!supabase) return { codes: [], error: SUPABASE_NOT_CONFIGURED };
 
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const { data: deletedRows, error } = await supabase
+    .from("codes")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) return failWith(describeError(error));
+  if (!deletedRows || deletedRows.length === 0) {
+    return failWith("Nada foi excluído. O QR Code não existe ou você não tem permissão.");
   }
 
-  if (itemToDelete) {
-    try {
-      const supabase = createClient();
-      await supabase.from("codes").delete().eq("slug", itemToDelete.slug);
-    } catch (e) {
-      console.warn("Erro ao remover no Supabase:", e);
-    }
-  }
-
-  return updated;
+  return getStoredCodes();
 }

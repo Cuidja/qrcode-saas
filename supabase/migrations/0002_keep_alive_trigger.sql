@@ -1,59 +1,69 @@
--- Migration 0002: Gatilho e Tabela de Keep-Alive
--- Copie e cole este código no Supabase SQL Editor
+-- Migration 0002: Tabela, trigger e função de Keep-Alive (definição única e idempotente)
+-- Pode ser executada em bancos novos OU em bancos onde a antiga 0000 já criou a tabela.
 
--- 1. Criar extensões
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- 2. Tabela para registrar os pings automáticos de keep-alive
+-- 1. Tabela (formato canônico) ---------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS keep_alive_log (
   id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  random_hash  text NOT NULL,
+  random_hash  text NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text),
   source       text NOT NULL DEFAULT 'cron-trigger',
   created_at   timestamptz NOT NULL DEFAULT now()
 );
 
--- 3. Limpeza automática: Manter apenas os últimos 20 registros
+-- Reparo para instalações criadas pela 0000 antiga (que tinha pinged_at e não tinha random_hash)
+ALTER TABLE keep_alive_log
+  ADD COLUMN IF NOT EXISTS random_hash text NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text);
+ALTER TABLE keep_alive_log
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
+-- 2. Limpeza: manter apenas os últimos 20 registros --------------------------------------------
+-- SECURITY DEFINER: o ping chega com a chave anon, que não tem (nem deve ter) policy de SELECT/DELETE.
+-- Statement-level: uma limpeza por INSERT, não uma por linha.
 CREATE OR REPLACE FUNCTION trim_keep_alive_log()
-RETURNS trigger AS '
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   DELETE FROM keep_alive_log
   WHERE id NOT IN (
     SELECT id FROM keep_alive_log
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT 20
   );
-  RETURN NEW;
+  RETURN NULL;
 END;
-' LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS trim_keep_alive_log_trigger ON keep_alive_log;
 CREATE TRIGGER trim_keep_alive_log_trigger
   AFTER INSERT ON keep_alive_log
-  FOR EACH ROW EXECUTE FUNCTION trim_keep_alive_log();
+  FOR EACH STATEMENT EXECUTE FUNCTION trim_keep_alive_log();
 
--- 4. Função que insere um hash aleatório seguro
+-- 3. Função de ping manual ----------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trigger_keep_alive_ping()
-RETURNS void AS '
-DECLARE
-  v_random_hash text;
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  v_random_hash := md5(random()::text || clock_timestamp()::text);
-  INSERT INTO keep_alive_log (random_hash, source, created_at)
-  VALUES (v_random_hash, ''supabase-ping'', now());
+  INSERT INTO keep_alive_log (random_hash, source)
+  VALUES (md5(random()::text || clock_timestamp()::text), 'supabase-ping');
 END;
-' LANGUAGE plpgsql;
+$$;
 
--- 5. Habilitar RLS e permitir gravações
+REVOKE ALL ON FUNCTION trigger_keep_alive_ping() FROM PUBLIC, anon, authenticated;
+
+-- 4. RLS: o Action só precisa INSERIR. Leitura pública removida (não há motivo para expor). -------
 ALTER TABLE keep_alive_log ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "allow public insert keep alive" ON keep_alive_log;
-CREATE POLICY "allow public insert keep alive" ON keep_alive_log FOR INSERT WITH CHECK (true);
-
+DROP POLICY IF EXISTS "allow public insert" ON keep_alive_log;
+DROP POLICY IF EXISTS "allow public select" ON keep_alive_log;
 DROP POLICY IF EXISTS "allow public select keep alive" ON keep_alive_log;
-CREATE POLICY "allow public select keep alive" ON keep_alive_log FOR SELECT USING (true);
+DROP POLICY IF EXISTS "allow public insert keep alive" ON keep_alive_log;
 
--- 6. Executar o primeiro disparo de teste para gravar 1 hash aleatório inicial
+CREATE POLICY "allow public insert keep alive" ON keep_alive_log
+  FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+REVOKE ALL ON keep_alive_log FROM anon, authenticated;
+GRANT INSERT (random_hash, source) ON keep_alive_log TO anon, authenticated;
+
+-- 5. Primeiro disparo de teste ---------------------------------------------------------------------
 SELECT trigger_keep_alive_ping();
 
--- 7. Confirmar
 SELECT 'Keep alive configurado e testado com sucesso! ✅' AS status;

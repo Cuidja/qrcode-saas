@@ -57,6 +57,8 @@ function QRThumbnail({ code }: { code: QRCodeItem }) {
 
 export default function CodesPage() {
   const [codes, setCodes] = useState<QRCodeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -64,11 +66,15 @@ export default function CodesPage() {
   // Modal de Edição de Destino
   const [editingCode, setEditingCode] = useState<QRCodeItem | null>(null);
   const [newTargetUrl, setNewTargetUrl] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     async function loadCodes() {
-      const items = await getStoredCodes();
-      setCodes(items);
+      const result = await getStoredCodes();
+      setCodes(result.codes);
+      setListError(result.error);
+      setLoading(false);
     }
     loadCodes();
   }, []);
@@ -80,34 +86,52 @@ export default function CodesPage() {
     return "http://localhost:3000";
   };
 
-  const handleCopyLink = (code: QRCodeItem) => {
+  const handleCopyLink = async (code: QRCodeItem) => {
     const fullUrl = `${getAppBaseUrl()}/r/${code.slug}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopiedId(code.id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedId(code.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setListError("Não foi possível copiar o link automaticamente. Copie manualmente: " + fullUrl);
+    }
   };
 
   const handleOpenEdit = (code: QRCodeItem) => {
     setEditingCode(code);
     setNewTargetUrl(code.target_url);
+    setEditError(null);
   };
 
   const handleSaveEdit = async () => {
-    if (!editingCode || !newTargetUrl.trim()) return;
-    const updated = await updateCodeTarget(editingCode.id, newTargetUrl.trim());
-    setCodes(updated);
+    if (!editingCode || savingEdit) return;
+
+    setSavingEdit(true);
+    setEditError(null);
+    const result = await updateCodeTarget(editingCode.id, newTargetUrl);
+    setSavingEdit(false);
+
+    if (result.error) {
+      // Mantém o modal aberto: o banco NÃO foi alterado.
+      setEditError(result.error);
+      return;
+    }
+
+    setCodes(result.codes);
     setEditingCode(null);
   };
 
   const handleToggleActive = async (id: string) => {
-    const updated = await toggleCodeActive(id);
-    setCodes(updated);
+    const result = await toggleCodeActive(id);
+    setCodes(result.codes);
+    setListError(result.error);
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este QR Code?")) {
-      const updated = await deleteCodeItem(id);
-      setCodes(updated);
+      const result = await deleteCodeItem(id);
+      setCodes(result.codes);
+      setListError(result.error);
     }
   };
 
@@ -237,19 +261,24 @@ export default function CodesPage() {
             Drive more scans with clear, compelling QR code CTAs and custom shapes.
           </div>
         </div>
-
-        <button style={{
-          padding: "8px 16px", borderRadius: 20, border: "1px solid #0284c7",
-          backgroundColor: "#ffffff", color: "#0284c7", fontSize: 12, fontWeight: 700,
-          cursor: "pointer"
-        }}>
-          LEARN HOW ↗
-        </button>
       </div>
+
+      {listError && (
+        <div role="alert" style={{
+          backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b",
+          borderRadius: 12, padding: "14px 18px", marginBottom: 16, fontSize: 13, fontWeight: 600
+        }}>
+          {listError}
+        </div>
+      )}
 
       {/* CARDS HORIZONTAIS DE QR CODES (Estilo QRCG) */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {filteredCodes.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b", fontSize: 14 }}>
+            Carregando seus QR Codes...
+          </div>
+        ) : filteredCodes.length === 0 ? (
           <div style={{
             backgroundColor: "#ffffff", border: "1px dashed #cbd5e1",
             borderRadius: 16, padding: "60px 20px", textAlign: "center"
@@ -356,8 +385,8 @@ export default function CodesPage() {
                 </button>
 
                 <Link
-                  href="/dashboard/codes/new"
-                  title="Personalizar Design"
+                  href={`/dashboard/codes/${code.id}`}
+                  title="Detalhes e Analytics"
                   style={{
                     width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0",
                     backgroundColor: "#ffffff", cursor: "pointer", display: "flex",
@@ -402,6 +431,18 @@ export default function CodesPage() {
                 </button>
 
                 <button
+                  onClick={() => handleToggleActive(code.id)}
+                  title={code.active ? "Pausar QR Code" : "Reativar QR Code"}
+                  style={{
+                    height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0",
+                    backgroundColor: "#ffffff", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                    color: code.active ? "#b45309" : "#15803d"
+                  }}
+                >
+                  {code.active ? "Pause" : "Resume"}
+                </button>
+
+                <button
                   onClick={() => handleDelete(code.id)}
                   title="Excluir"
                   style={{
@@ -433,7 +474,7 @@ export default function CodesPage() {
               ✏️ Edit Destination
             </h3>
             <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 20px 0" }}>
-              Update target URL for <strong>qrhub.io/r/{editingCode.slug}</strong>. The printed QR Code remains unchanged!
+              Update target URL for <strong>{getAppBaseUrl().replace(/^https?:\/\//, "")}/r/{editingCode.slug}</strong>. The printed QR Code remains unchanged!
             </p>
 
             <div style={{ marginBottom: 20 }}>
@@ -443,13 +484,18 @@ export default function CodesPage() {
               <input
                 value={newTargetUrl}
                 onChange={e => setNewTargetUrl(e.target.value)}
-                placeholder="https://cuidja.com/novo-destino"
+                placeholder="https://exemplo.com/novo-destino"
                 style={{
                   width: "100%", padding: "10px 14px", borderRadius: 8,
                   border: "1px solid #cbd5e1", fontSize: 14, outline: "none",
                   boxSizing: "border-box"
                 }}
               />
+              {editError && (
+                <div role="alert" style={{ marginTop: 10, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+                  {editError}
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
@@ -464,12 +510,14 @@ export default function CodesPage() {
               </button>
               <button
                 onClick={handleSaveEdit}
+                disabled={savingEdit}
                 style={{
                   flex: 2, padding: "10px", borderRadius: 8, border: "none",
-                  backgroundColor: "#0f172a", color: "#ffffff", fontWeight: 700, cursor: "pointer"
+                  backgroundColor: savingEdit ? "#64748b" : "#0f172a", color: "#ffffff", fontWeight: 700,
+                  cursor: savingEdit ? "wait" : "pointer"
                 }}
               >
-                Save Destination
+                {savingEdit ? "Saving..." : "Save Destination"}
               </button>
             </div>
           </div>

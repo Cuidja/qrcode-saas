@@ -296,18 +296,32 @@ export default function NewCodePage() {
                   <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
                     NAME YOUR QR CODE
                   </h3>
-                  <a
-                    href="https://productmate.com/pt-br/gerador-de-link-de-avaliacao-google"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      fontSize: 12, fontWeight: 700, color: "#b45309", textDecoration: "none",
-                      backgroundColor: "#fef3c7", padding: "4px 10px", borderRadius: 6,
-                      border: "1px solid #fcd34d", display: "inline-flex", alignItems: "center", gap: 4
-                    }}
-                  >
-                    <span>⭐</span> Gerar Link Google Reviews ↗
-                  </a>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <a
+                      href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        fontSize: 12, fontWeight: 700, color: "#0369a1", textDecoration: "none",
+                        backgroundColor: "#f0f9ff", padding: "4px 10px", borderRadius: 6,
+                        border: "1px solid #7dd3fc", display: "inline-flex", alignItems: "center", gap: 4
+                      }}
+                    >
+                      <span>📍</span> Buscar Place ID ↗
+                    </a>
+                    <a
+                      href="https://productmate.com/pt-br/gerador-de-link-de-avaliacao-google"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        fontSize: 12, fontWeight: 700, color: "#b45309", textDecoration: "none",
+                        backgroundColor: "#fef3c7", padding: "4px 10px", borderRadius: 6,
+                        border: "1px solid #fcd34d", display: "inline-flex", alignItems: "center", gap: 4
+                      }}
+                    >
+                      <span>⭐</span> Gerar Link Google Reviews ↗
+                    </a>
+                  </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>

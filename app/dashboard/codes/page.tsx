@@ -156,6 +156,29 @@ export default function CodesPage() {
 
         <div style={{ display: "flex", gap: 12 }}>
           <a
+            href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "#f0f9ff",
+              color: "#0369a1",
+              border: "1px solid #7dd3fc",
+              padding: "10px 16px",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              textDecoration: "none",
+              boxShadow: "0 2px 6px rgba(14,165,233,0.1)",
+              transition: "all 0.2s"
+            }}
+          >
+            <span>📍</span> Encontrar Place ID
+          </a>
+
+          <a
             href="https://productmate.com/pt-br/gerador-de-link-de-avaliacao-google"
             target="_blank"
             rel="noreferrer"

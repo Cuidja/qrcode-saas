@@ -74,6 +74,7 @@ export default function NewCodePage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedType, setSelectedType] = useState<string>("website");
   const [targetUrl, setTargetUrl] = useState("");
+  const [label, setLabel] = useState("");
   const [slug, setSlug] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -141,7 +142,7 @@ export default function NewCodePage() {
     setFormError(null);
 
     const result = await saveCodeItem({
-      label: check.url,
+      label: label || check.url,
       slug: slug,
       target_url: check.url,
       type: selectedType as QRCodeItem["type"],
@@ -289,11 +290,11 @@ export default function NewCodePage() {
             {/* COLUNA ESQUERDA: OPÇÕES DE CUSTOMIZAÇÃO */}
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-              {/* 0. TARGET DESTINATION LINK */}
+              {/* 0. NAME & TARGET DESTINATION LINK */}
               <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
-                    TARGET URL / DESTINATION
+                    NAME YOUR QR CODE
                   </h3>
                   <a
                     href="https://productmate.com/pt-br/gerador-de-link-de-avaliacao-google"
@@ -308,15 +309,35 @@ export default function NewCodePage() {
                     <span>⭐</span> Gerar Link Google Reviews ↗
                   </a>
                 </div>
-                <input
-                  value={targetUrl}
-                  onChange={e => setTargetUrl(e.target.value)}
-                  placeholder="https://www.your-website.com"
-                  style={{
-                    width: "100%", padding: "10px 14px", borderRadius: 8,
-                    border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box"
-                  }}
-                />
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>
+                    QR CODE NAME (OPTIONAL)
+                  </label>
+                  <input
+                    value={label}
+                    onChange={e => setLabel(e.target.value)}
+                    placeholder="Ex: Main Website, Summer Campaign..."
+                    style={{
+                      width: "100%", padding: "10px 14px", borderRadius: 8,
+                      border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>
+                    TARGET URL (DESTINATION)
+                  </label>
+                  <input
+                    value={targetUrl}
+                    onChange={e => setTargetUrl(e.target.value)}
+                    placeholder="https://www.your-website.com"
+                    style={{
+                      width: "100%", padding: "10px 14px", borderRadius: 8,
+                      border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box"
+                    }}
+                  />
+                </div>
                 {formError && (
                   <div role="alert" style={{ marginTop: 10, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
                     {formError}

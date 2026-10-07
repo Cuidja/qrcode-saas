@@ -142,8 +142,8 @@ export async function saveCodeItem(
   return { codes: current.codes, error: current.error, created: mapRow(data) };
 }
 
-/** Altera o destino. O slug (e portanto o QR impresso) não muda. */
-export async function updateCodeTarget(id: string, newTarget: string): Promise<StoreResult> {
+/** Altera o destino e o nome (rótulo). O slug (e portanto o QR impresso) não muda. */
+export async function updateCodeTarget(id: string, newTarget: string, newLabel?: string): Promise<StoreResult> {
   const supabase = getClient();
   if (!supabase) return { codes: [], error: SUPABASE_NOT_CONFIGURED };
 
@@ -159,10 +159,16 @@ export async function updateCodeTarget(id: string, newTarget: string): Promise<S
   if (readError) return failWith(describeError(readError));
   if (!existing) return failWith("QR Code não encontrado (ou você não tem permissão para editá-lo).");
 
-  // O rótulo só acompanha o destino se o usuário nunca o personalizou.
-  const labelFollowsTarget = !existing.label || existing.label === existing.target_url;
   const patch: DbRow = { target_url: target.url, updated_at: new Date().toISOString() };
-  if (labelFollowsTarget) patch.label = target.url;
+  
+  // Se recebemos um label explícito, usamos ele. 
+  // Senão, mantemos a lógica antiga (o label segue a URL se antes não tinha sido personalizado).
+  if (newLabel !== undefined) {
+    patch.label = newLabel.trim() || target.url;
+  } else {
+    const labelFollowsTarget = !existing.label || existing.label === existing.target_url;
+    if (labelFollowsTarget) patch.label = target.url;
+  }
 
   const { data: updatedRows, error } = await supabase
     .from("codes")

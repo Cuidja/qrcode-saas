@@ -108,7 +108,7 @@ export default function CodesPage() {
 
     setSavingEdit(true);
     setEditError(null);
-    const result = await updateCodeTarget(editingCode.id, newTargetUrl);
+    const result = await updateCodeTarget(editingCode.id, newTargetUrl, editingCode.label);
     setSavingEdit(false);
 
     if (result.error) {
@@ -307,14 +307,24 @@ export default function CodesPage() {
               <QRThumbnail code={code} />
 
               {/* Coluna 2: Informações de Link + Redirecionamento */}
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Título da URL principal */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, maxWidth: "100%" }}>
                   <a
                     href={code.target_url}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontSize: 16, fontWeight: 800, color: "#0284c7", textDecoration: "none" }}
+                    title={code.label}
+                    style={{ 
+                      fontSize: 16, 
+                      fontWeight: 800, 
+                      color: "#0284c7", 
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "calc(100% - 80px)"
+                    }}
                   >
                     {code.label}
                   </a>
@@ -459,7 +469,7 @@ export default function CodesPage() {
         )}
       </div>
 
-      {/* MODAL DE EDIÇÃO RÁPIDA DE DESTINO */}
+      {/* MODAL DE EDIÇÃO DE NOME E DESTINO */}
       {editingCode && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -471,11 +481,27 @@ export default function CodesPage() {
             maxWidth: 480, width: "100%", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
           }}>
             <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0" }}>
-              ✏️ Edit Destination
+              ✏️ Edit QR Code
             </h3>
             <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 20px 0" }}>
-              Update target URL for <strong>{getAppBaseUrl().replace(/^https?:\/\//, "")}/r/{editingCode.slug}</strong>. The printed QR Code remains unchanged!
+              Update name and target URL for <strong>{getAppBaseUrl().replace(/^https?:\/\//, "")}/r/{editingCode.slug}</strong>. The printed QR Code remains unchanged!
             </p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+                QR Code Name (Label)
+              </label>
+              <input
+                value={editingCode.label}
+                onChange={e => setEditingCode({ ...editingCode, label: e.target.value })}
+                placeholder="My Awesome Campaign"
+                style={{
+                  width: "100%", padding: "10px 14px", borderRadius: 8,
+                  border: "1px solid #cbd5e1", fontSize: 14, outline: "none",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
 
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
@@ -517,7 +543,7 @@ export default function CodesPage() {
                   cursor: savingEdit ? "wait" : "pointer"
                 }}
               >
-                {savingEdit ? "Saving..." : "Save Destination"}
+                {savingEdit ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

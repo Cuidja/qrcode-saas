@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicConfig } from "./config";
 
 // Rotas que exigem sessão. O redirect público (/r/*), a landing (/) e /auth/* ficam abertos.
-const PROTECTED_PREFIXES = ["/dashboard", "/protected"];
+const PROTECTED_PREFIXES = ["/dashboard"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({

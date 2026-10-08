@@ -1,10 +1,17 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { QrCode, BarChart3, HelpCircle, LogOut, TrendingUp } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+  };
 
   const navItems = [
     { label: "All QR Codes", href: "/dashboard/codes", icon: QrCode },
@@ -43,23 +50,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Weekly Scans Widget */}
-        <div style={{
-          backgroundColor: "#f8fafc",
-          borderRadius: 10,
-          padding: "14px 16px",
-          border: "1px solid #e2e8f0",
-          marginBottom: 20
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#64748b", fontWeight: 600 }}>
-            <span>Weekly Scans</span>
-            <TrendingUp size={14} color="#0284c7" />
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>2</span>
-            <span style={{ fontSize: 11, color: "#94a3b8" }}>since Sep 24th</span>
-          </div>
-        </div>
+
 
         {/* Navegação Principal */}
         <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -100,7 +91,7 @@ export function Sidebar() {
           <span style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
             <HelpCircle size={15} /> Ajuda
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "#ef4444" }}>
+          <span onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "#ef4444" }}>
             <LogOut size={15} /> Sair
           </span>
         </div>

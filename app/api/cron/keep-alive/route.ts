@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+// Cooldown em memória: impede spam da rota de keep-alive por curiosos ou bots (mínimo 5 minutos de intervalo)
+let lastExecutionTime = 0;
+const COOLDOWN_MS = 5 * 60 * 1000;
+
 export async function GET() {
+  const now = Date.now();
+  if (now - lastExecutionTime < COOLDOWN_MS) {
+    const waitSeconds = Math.ceil((COOLDOWN_MS - (now - lastExecutionTime)) / 1000);
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Ping recente já executado. Cooldown ativo por mais ${waitSeconds}s.`,
+        cached: true,
+      },
+      { status: 200 }
+    );
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -30,6 +47,8 @@ export async function GET() {
         { status: 500 }
       );
     }
+
+    lastExecutionTime = Date.now();
 
     return NextResponse.json({
       success: true,

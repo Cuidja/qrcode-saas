@@ -4,44 +4,83 @@ export type UrlValidationResult =
   | { ok: true; url: string }
   | { ok: false; error: string };
 
+// Padrões de endereços privados / loopback / metadados em nuvem (Anti-SSRF)
+const PRIVATE_IP_PATTERNS = [
+  /^127\./,                         // 127.0.0.0/8 (Loopback)
+  /^10\./,                          // 10.0.0.0/8 (Rede Privada)
+  /^192\.168\./,                    // 192.168.0.0/16 (Rede Privada Local)
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12 (Rede Privada)
+  /^169\.254\./,                    // 169.254.0.0/16 (Link-local / AWS Metadata 169.254.169.254)
+  /^0\.0\.0\.0$/,
+  /^::1$/,                          // IPv6 loopback
+  /^fc00:/i,                        // IPv6 Unique Local
+  /^fe80:/i,                        // IPv6 Link-local
+];
+
 /**
- * Valida e normaliza uma URL de destino.
+ * Validação rigorosa e sanitização de URLs de destino.
  * - Só aceita http:// e https:// (bloqueia javascript:, data:, file:, etc.).
  * - Se o usuário digitar sem esquema ("meusite.com"), assume https://.
- * - Rejeita credenciais embutidas (user:senha@host) e hosts sem ponto (exceto localhost).
+ * - Rejeita credenciais embutidas (user:senha@host).
+ * - Proteção Anti-SSRF: rejeita localhost, IPs privados e metadados de nuvem.
+ * - Proteção Anti-Looping: rejeita redirecionamentos recursivos para o próprio /r/.
  */
 export function validateTargetUrl(input: string): UrlValidationResult {
   const raw = (input ?? "").trim();
 
   if (!raw) return { ok: false, error: "Informe a URL de destino." };
   if (raw.length > MAX_TARGET_URL_LENGTH) {
-    return { ok: false, error: `A URL excede ${MAX_TARGET_URL_LENGTH} caracteres.` };
+    return { ok: false, error: `A URL excede o limite máximo de ${MAX_TARGET_URL_LENGTH} caracteres.` };
   }
   if (/[\s\u0000-\u001f]/.test(raw)) {
-    return { ok: false, error: "A URL não pode conter espaços ou caracteres de controle." };
+    return { ok: false, error: "A URL não pode conter espaços ou caracteres de controle inválidos." };
   }
 
   // Esquema explícito diferente de http(s) (ex.: javascript:, data:, mailto:, ftp://)
   const hasExplicitScheme = /^[a-z][a-z0-9+.-]*:/i.test(raw);
-  const looksLikeHostPort = /^[^/\s:@]+:\d+(\/|$)/.test(raw); // "meusite.com:8080/x"
+  const looksLikeHostPort = /^[^/\s:@]+:\d+(\/|$)/.test(raw);
   const candidate = hasExplicitScheme && !looksLikeHostPort ? raw : `https://${raw}`;
 
   let parsed: URL;
   try {
     parsed = new URL(candidate);
   } catch {
-    return { ok: false, error: "URL inválida." };
+    return { ok: false, error: "Formato de URL inválido." };
   }
 
+  // 1. Apenas HTTP e HTTPS
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { ok: false, error: "Apenas URLs http:// ou https:// são permitidas." };
+    return { ok: false, error: "Apenas protocolos seguros http:// ou https:// são permitidos." };
   }
+
+  // 2. Proibir credenciais embutidas
   if (parsed.username || parsed.password) {
-    return { ok: false, error: "A URL não pode conter usuário ou senha embutidos." };
+    return { ok: false, error: "A URL não pode conter usuário ou senha embutidos por motivos de segurança." };
   }
-  const host = parsed.hostname;
-  if (!host || (!host.includes(".") && host !== "localhost" && !host.includes(":"))) {
-    return { ok: false, error: "Informe um domínio válido (ex.: meusite.com)." };
+
+  const host = parsed.hostname.toLowerCase();
+
+  // 3. Proibir localhost
+  if (host === "localhost" || host.endsWith(".localhost") || host === "127.0.0.1") {
+    return { ok: false, error: "Endereços locais (localhost) não são permitidos em produção." };
+  }
+
+  // 4. Bloqueio Anti-SSRF (IPs privados / Metadados AWS/GCP)
+  for (const pattern of PRIVATE_IP_PATTERNS) {
+    if (pattern.test(host)) {
+      return { ok: false, error: "Endereços IP de redes internas ou privadas não são permitidos." };
+    }
+  }
+
+  // 5. Exigir formato de domínio válido
+  if (!host.includes(".")) {
+    return { ok: false, error: "Informe um domínio público válido (exemplo: seusite.com.br)." };
+  }
+
+  // 6. Proteção Anti-Looping (Não permitir que um QR Code aponte para outro /r/ do próprio domínio)
+  const pathname = parsed.pathname.toLowerCase();
+  if ((host === "qr.cuidja.com" || host.endsWith("cuidja.com")) && pathname.startsWith("/r/")) {
+    return { ok: false, error: "Não é permitido criar redirecionamentos recursivos para o próprio encurtador." };
   }
 
   return { ok: true, url: parsed.toString() };

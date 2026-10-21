@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { validateTargetUrl } from "@/lib/url-validation";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,64}$/;
 
-// Nunca cachear: editar o destino precisa valer imediatamente para o mesmo QR impresso.
-const NO_STORE = { "Cache-Control": "no-store, max-age=0" };
+// Regex de identificação de rastreadores e geradores de thumbnail de redes sociais
+const BOT_PATTERN = /bot|crawler|spider|crawling|facebookexternalhit|whatsapp|telegrambot|twitterbot|slackbot|discordbot|applebot|preview/i;
 
-function textResponse(message: string, status: number) {
+// Nunca cachear: editar o destino precisa valer imediatamente para o mesmo QR impresso.
+const NO_STORE = { 
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  "Pragma": "no-cache",
+};
+
+function textResponse(message: string, status: number, headersExtra: Record<string, string> = {}) {
   return new NextResponse(message, {
     status,
-    headers: { ...NO_STORE, "Content-Type": "text/plain; charset=utf-8" },
+    headers: { ...NO_STORE, "Content-Type": "text/plain; charset=utf-8", ...headersExtra },
   });
 }
 
@@ -23,6 +30,19 @@ export async function GET(
 
   if (!slug || !SLUG_PATTERN.test(slug)) {
     return textResponse("QR Code inválido.", 400);
+  }
+
+  // 1. Rate Limiting por IP (Proteção ativa contra ataques de sobrecarga / DoS)
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
+  const rateLimit = checkRateLimit(ip, 60, 60_000); // 60 requisições por minuto por IP
+
+  if (!rateLimit.allowed) {
+    return textResponse(
+      "Limite de requisições excedido. Por favor, aguarde alguns segundos.",
+      429,
+      { "Retry-After": String(rateLimit.resetSeconds) }
+    );
   }
 
   const config = getSupabasePublicConfig();
@@ -38,7 +58,7 @@ export async function GET(
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // 1. Buscar destino
+  // 2. Buscar destino no banco
   const { data, error } = await supabase.rpc("resolve_code", { p_slug: slug });
 
   if (error) {
@@ -55,25 +75,36 @@ export async function GET(
     return textResponse("Este QR Code está pausado ou desativado pelo proprietário.", 410);
   }
 
-  // 2. Nunca redirecionar para algo que não seja http(s) válido, mesmo que o banco contenha lixo.
+  // 3. Validação rigorosa e Anti-SSRF da URL antes de redirecionar
   const target = validateTargetUrl(code.target_url);
   if (!target.ok) {
     console.error(`[redirect] target_url inválido para o slug ${slug}:`, target.error);
-    return textResponse("O destino deste QR Code é inválido.", 502);
+    return textResponse("O destino deste QR Code é inválido ou inseguro.", 502);
   }
 
-  // 3. Registrar o scan (contador + analytics). Falha aqui não pode impedir o redirect.
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : null;
-  const { error: scanError } = await supabase.rpc("record_scan", {
-    p_slug: slug,
-    p_user_agent: request.headers.get("user-agent") ?? "",
-    p_ip: ip ?? "",
+  // 4. Filtro Inteligente de Bots e Previews de Mensageiros (WhatsApp, Telegram, Facebook)
+  // Se for um bot apenas gerando preview de link, não inflamos as métricas de scans reais de humanos.
+  const userAgent = request.headers.get("user-agent") ?? "";
+  const isBot = BOT_PATTERN.test(userAgent);
+
+  if (!isBot) {
+    const { error: scanError } = await supabase.rpc("record_scan", {
+      p_slug: slug,
+      p_user_agent: userAgent,
+      p_ip: ip,
+    });
+    if (scanError) {
+      console.error("[redirect] Falha ao registrar scan:", scanError);
+    }
+  }
+
+  // 5. Redirecionamento 307 com cabeçalhos de segurança estritos
+  return NextResponse.redirect(target.url, { 
+    status: 307, 
+    headers: {
+      ...NO_STORE,
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer-when-downgrade"
+    } 
   });
-  if (scanError) {
-    console.error("[redirect] Falha ao registrar scan:", scanError);
-  }
-
-  // 4. 307 (temporário): o destino pode mudar a qualquer momento.
-  return NextResponse.redirect(target.url, { status: 307, headers: NO_STORE });
 }

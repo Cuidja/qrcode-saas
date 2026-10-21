@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Política de Privacidade — QRCG",
-  description: "Política de Privacidade e Proteção de Dados da plataforma QRCG.",
+  title: "Política de Privacidade — Qr Cuidja",
+  description: "Política de Privacidade e Proteção de Dados da plataforma Qr Cuidja.",
 };
 
 export default function PrivacyPage() {
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           Política de Privacidade
         </h1>
         <p style={{ fontSize: 16, color: "#64748b", lineHeight: 1.6, marginBottom: 36 }}>
-          A sua privacidade e a segurança dos seus dados são fundamentais para nós. Esta política explica como a <strong>QRCG</strong> coleta, usa, armazena e protege suas informações ao utilizar nossa plataforma de QR Codes dinâmicos e serviços integrados.
+          A sua privacidade e a segurança dos seus dados são fundamentais para nós. Esta política explica como a <strong>Qr Cuidja</strong> coleta, usa, armazena e protege suas informações ao utilizar nossa plataforma de QR Codes dinâmicos e serviços integrados.
         </p>
 
         <section style={{ marginBottom: 32 }}>
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #e2e8f0", padding: "24px", textAlign: "center", fontSize: 13, color: "#64748b" }}>
-        © {new Date().getFullYear()} QRCG. Todos os direitos reservados.
+        © {new Date().getFullYear()} Qr Cuidja. Todos os direitos reservados.
       </footer>
     </div>
   );

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "QRCG — QR Code Generator & Dynamic Management",
-  description: "Create, customize, track and manage dynamic QR codes effortlessly.",
+  title: "Qr Cuidja — Gerador de QR Code Inteligente & Avaliações",
+  description: "Crie, personalize e gerencie QR Codes dinâmicos com rastreamento e foco em avaliações 5 estrelas no Google.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

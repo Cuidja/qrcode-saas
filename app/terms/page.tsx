@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Termos de Serviço — QRCG",
-  description: "Termos e Condições de Uso da plataforma QRCG.",
+  title: "Termos de Serviço — Qr Cuidja",
+  description: "Termos e Condições de Uso da plataforma Qr Cuidja.",
 };
 
 export default function TermsPage() {
@@ -25,7 +25,7 @@ export default function TermsPage() {
           Termos de Serviço
         </h1>
         <p style={{ fontSize: 16, color: "#64748b", lineHeight: 1.6, marginBottom: 36 }}>
-          Bem-vindo ao <strong>QRCG</strong>. Ao acessar ou utilizar nossa plataforma, você concorda em cumprir e estar vinculado aos presentes Termos de Serviço. Caso não concorde com qualquer termo, não utilize a plataforma.
+          Bem-vindo ao <strong>Qr Cuidja</strong>. Ao acessar ou utilizar nossa plataforma, você concorda em cumprir e estar vinculado aos presentes Termos de Serviço. Caso não concorde com qualquer termo, não utilize a plataforma.
         </p>
 
         <section style={{ marginBottom: 32 }}>
@@ -33,7 +33,7 @@ export default function TermsPage() {
             1. Objeto do Serviço
           </h2>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: "#334155" }}>
-            A QRCG disponibiliza ferramentas de software como serviço (SaaS) para criação, customização visual, gerenciamento dinâmico e rastreamento analítico de códigos QR voltados para marketing, avaliações no Google Maps e conectividade empresarial.
+            A Qr Cuidja disponibiliza ferramentas de software como serviço (SaaS) para criação, customização visual, gerenciamento dinâmico e rastreamento analítico de códigos QR voltados para marketing, avaliações no Google Maps e conectividade empresarial.
           </p>
         </section>
 
@@ -85,7 +85,7 @@ export default function TermsPage() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #e2e8f0", padding: "24px", textAlign: "center", fontSize: 13, color: "#64748b" }}>
-        © {new Date().getFullYear()} QRCG. Todos os direitos reservados.
+        © {new Date().getFullYear()} Qr Cuidja. Todos os direitos reservados.
       </footer>
     </div>
   );

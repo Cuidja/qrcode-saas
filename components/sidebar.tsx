@@ -46,7 +46,7 @@ export function Sidebar() {
           </div>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px", color: "#0f172a" }}>
-              QRCG <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>by Bitly</span>
+              Qr Cuidja
             </div>
           </div>
         </div>

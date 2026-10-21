@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getStoredCodes } from "@/lib/codes-store";
+import { getStoredCodes, isStaticCode } from "@/lib/codes-store";
 import { getUserPlan, setUserPlan, PlanDetails, UserPlan } from "@/lib/user-plan";
 import { Check, Zap, Sparkles, Building2, QrCode, CreditCard, Shield, X } from "lucide-react";
 
 export default function BillingPage() {
   const [codeCount, setCodeCount] = useState(0);
+  const [staticCount, setStaticCount] = useState(0);
   const [planDetails, setPlanDetails] = useState<PlanDetails>({
     plan: "free",
     isPro: false,
@@ -30,7 +31,10 @@ export default function BillingPage() {
         getStoredCodes(),
         getUserPlan()
       ]);
-      setCodeCount(codesRes.codes.length);
+      const dynamicCount = codesRes.codes.filter(c => !isStaticCode(c)).length;
+      const staticTotal = codesRes.codes.filter(c => isStaticCode(c)).length;
+      setCodeCount(dynamicCount);
+      setStaticCount(staticTotal);
       setPlanDetails(planRes);
       setLoading(false);
     }
@@ -181,9 +185,11 @@ export default function BillingPage() {
 
           <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
             {loading ? "Carregando..." : (
-              planDetails.isPro 
-                ? `${codeCount} QR Codes criados (Cota Ilimitada ∞)`
-                : `${codeCount} de ${planDetails.limit} QR Codes utilizados`
+              planDetails.isAdmin 
+                ? `${codeCount} Dinâmicos + ${staticCount} Estáticos criados (Cota Ilimitada ∞)`
+                : planDetails.isPro 
+                  ? `${codeCount} QR Codes Dinâmicos criados (Cota Ilimitada ∞) + ${staticCount} Estáticos`
+                  : `${codeCount} de ${planDetails.limit} QR Codes Dinâmicos utilizados (+ ${staticCount} Estáticos gratuitos)`
             )}
           </div>
         </div>

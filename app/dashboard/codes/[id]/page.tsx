@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getStoredCodes, QRCodeItem } from "@/lib/codes-store";
+import { getStoredCodes, QRCodeItem, isStaticCode } from "@/lib/codes-store";
 import { getScanStats, emptyStats, ScanStats } from "@/lib/analytics";
 import { renderCustomQRCode } from "@/lib/qr-renderer";
 import { ScanStatsView } from "@/components/scan-stats-view";
@@ -36,8 +36,11 @@ function CodeDetailClient() {
 
   useEffect(() => {
     if (!code || !canvasRef.current) return;
+    const isStatic = isStaticCode(code);
+    const textToRender = isStatic ? code.target_url : `${baseUrl}/r/${code.slug}`;
+
     renderCustomQRCode(canvasRef.current, {
-      text: `${baseUrl}/r/${code.slug}`,
+      text: textToRender,
       width: 260,
       color: code.color,
       bgColor: code.bg_color,
@@ -80,24 +83,47 @@ function CodeDetailClient() {
             padding: 20, textAlign: "center"
           }}>
             <canvas ref={canvasRef} style={{ maxWidth: "100%", height: "auto" }} />
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 12, wordBreak: "break-all" }}>
-              {baseUrl.replace(/^https?:\/\//, "")}/r/{code.slug}
+            <div style={{ fontSize: 12, color: isStaticCode(code) ? "#7c3aed" : "#64748b", marginTop: 12, wordBreak: "break-all", fontWeight: 600 }}>
+              {isStaticCode(code) ? `🏷️ Link Direto: ${code.target_url}` : `${baseUrl.replace(/^https?:\/\//, "")}/r/${code.slug}`}
             </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", wordBreak: "break-all" }}>
-                {code.label}
-              </h1>
-              <div style={{ fontSize: 13, color: "#475569", wordBreak: "break-all" }}>
-                ↳ {code.target_url} · {code.active ? "Active" : "Paused"} · criado em {code.created_at}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", margin: 0, wordBreak: "break-all" }}>
+                  {code.label}
+                </h1>
+                <span style={{
+                  fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 12,
+                  backgroundColor: isStaticCode(code) ? "#faf5ff" : (code.active ? "#dcfce7" : "#f1f5f9"),
+                  color: isStaticCode(code) ? "#7c3aed" : (code.active ? "#15803d" : "#64748b"),
+                  border: isStaticCode(code) ? "1px solid #e9d5ff" : "none"
+                }}>
+                  {isStaticCode(code) ? "🏷️ QR Estático" : (code.active ? "Ativo" : "Pausado")}
+                </span>
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>
-                Para alterar o destino ou pausar, volte para a lista de QR Codes.
+              <div style={{ fontSize: 13, color: "#475569", wordBreak: "break-all" }}>
+                ↳ {code.target_url} · criado em {code.created_at}
               </div>
             </div>
-            <ScanStatsView stats={stats} />
+
+            {isStaticCode(code) ? (
+              <div style={{
+                backgroundColor: "#faf5ff", border: "1px solid #e9d5ff",
+                borderRadius: 12, padding: "20px 24px", color: "#6b21a8"
+              }}>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
+                  🏷️ Informações do QR Code Estático
+                </div>
+                <p style={{ fontSize: 13, margin: 0, lineHeight: 1.6, color: "#581c87" }}>
+                  Este código possui o link gravado diretamente nos seus pixels físicos e não passa pelos servidores do Qr Cuidja. 
+                  Por ser 100% estático, ele <strong>nunca expira</strong> e <strong>não consome a cota do seu plano</strong>, mas não armazena estatísticas de escaneamento.
+                </p>
+              </div>
+            ) : (
+              <ScanStatsView stats={stats} />
+            )}
           </div>
         </div>
       )}

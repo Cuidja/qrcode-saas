@@ -22,7 +22,7 @@ import {
   RotateCcw
 } from "lucide-react";
 import { renderCustomQRCode } from "@/lib/qr-renderer";
-import { saveCodeItem, getStoredCodes, QRCodeItem } from "@/lib/codes-store";
+import { saveCodeItem, getStoredCodes, QRCodeItem, isStaticCode } from "@/lib/codes-store";
 import { validateTargetUrl } from "@/lib/url-validation";
 import { getUserPlan } from "@/lib/user-plan";
 
@@ -73,6 +73,7 @@ export default function NewCodePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [step, setStep] = useState<1 | 2>(1);
+  const [qrMode, setQrMode] = useState<"dynamic" | "static">("dynamic");
   const [selectedType, setSelectedType] = useState<string>("website");
   const [targetUrl, setTargetUrl] = useState("");
   const [label, setLabel] = useState("");
@@ -99,14 +100,13 @@ export default function NewCodePage() {
 
   const shortLink = `${baseUrl}/r/${slug}`;
   const shortLinkDisplay = shortLink.replace(/^https?:\/\//, "");
+  const qrTextToRender = qrMode === "static" ? targetUrl : shortLink;
 
   // Renderizar o QR Code em tempo real no Canvas sempre que qualquer propriedade mudar
   useEffect(() => {
-    if (step === 2 && canvasRef.current) {
-      const logoSvg = LOGO_PRESETS.find(l => l.id === selectedLogo)?.svg || null;
-
+    if (step === 2 && canvasRef.current && (qrMode === "dynamic" || targetUrl)) {
       renderCustomQRCode(canvasRef.current, {
-        text: shortLink,
+        text: qrTextToRender,
         width: 260,
         color: qrColor,
         bgColor: bgColor,
@@ -117,7 +117,7 @@ export default function NewCodePage() {
         logoId: selectedLogo
       });
     }
-  }, [step, targetUrl, slug, frameStyle, frameText, selectedLogo, shape, cornerStyle, qrColor, bgColor]);
+  }, [step, qrMode, qrTextToRender, targetUrl, slug, frameStyle, frameText, selectedLogo, shape, cornerStyle, qrColor, bgColor]);
 
   const handleCreateType = () => {
     const check = validateTargetUrl(targetUrl);
@@ -142,19 +142,22 @@ export default function NewCodePage() {
     setSaving(true);
     setFormError(null);
 
-    // Checar limite de criação de acordo com o Plano do Usuário (Administradores têm cota infinita)
+    // Checar limite de criação de acordo com o Plano do Usuário (QR Codes Estáticos são ILIMITADOS para todos)
     const [plan, stored] = await Promise.all([getUserPlan(), getStoredCodes()]);
-    if (!plan.isPro && !plan.isAdmin && stored.codes.length >= plan.limit) {
-      setFormError(`Você atingiu o limite de ${plan.limit} QR Codes do Plano Gratuito. Faça upgrade para o PRO para criar códigos ilimitados!`);
+    const dynamicCodesCount = stored.codes.filter(c => !isStaticCode(c)).length;
+
+    if (qrMode === "dynamic" && !plan.isPro && !plan.isAdmin && dynamicCodesCount >= plan.limit) {
+      setFormError(`Você atingiu o limite de ${plan.limit} QR Codes Dinâmicos do Plano Gratuito. Faça upgrade para o PRO para ilimitados ou alterne para QR Code Estático (gratuito e ilimitado)!`);
       setSaving(false);
       return;
     }
 
+    const finalSlug = qrMode === "static" ? `st-${slug}` : slug;
     const result = await saveCodeItem({
       label: label || check.url,
-      slug: slug,
+      slug: finalSlug,
       target_url: check.url,
-      type: selectedType as QRCodeItem["type"],
+      type: qrMode === "static" ? "static" : (selectedType as QRCodeItem["type"]),
       color: qrColor,
       bg_color: bgColor,
       icon: selectedLogo,
@@ -199,9 +202,79 @@ export default function NewCodePage() {
       {/* PASSO 1: CHOOSE YOUR QR CODE TYPE (Grid do QRCG) */}
       {step === 1 && (
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", marginBottom: 24 }}>
-            Create your QR Code
-          </h1>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+            <div>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0" }}>
+                Criar Novo QR Code
+              </h1>
+              <p style={{ fontSize: 14, color: "#64748b", margin: 0 }}>
+                Escolha entre QR Code Dinâmico (monitorado e editável) ou Estático (gratuito e ilimitado).
+              </p>
+            </div>
+          </div>
+
+          {/* SELETOR DE MODO: DINÂMICO VS ESTÁTICO */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28
+          }}>
+            <div
+              onClick={() => setQrMode("dynamic")}
+              style={{
+                padding: "18px 20px", borderRadius: 14, cursor: "pointer",
+                border: qrMode === "dynamic" ? "2px solid #0284c7" : "1px solid #e2e8f0",
+                backgroundColor: qrMode === "dynamic" ? "#f0f9ff" : "#ffffff",
+                boxShadow: qrMode === "dynamic" ? "0 4px 14px rgba(2, 132, 199, 0.12)" : "0 1px 3px rgba(0,0,0,0.03)",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: qrMode === "dynamic" ? "#0284c7" : "#0f172a" }}>
+                  ⚡ QR Code Dinâmico
+                </span>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 100,
+                  backgroundColor: "#0284c7", color: "#ffffff", letterSpacing: "0.5px"
+                }}>
+                  RECOMENDADO
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px 0", lineHeight: 1.5 }}>
+                O link pode ser <strong>alterado a qualquer momento</strong> após a impressão e inclui <strong>relatório completo de escaneamentos</strong>.
+              </p>
+              <div style={{ fontSize: 11, color: "#0284c7", fontWeight: 700 }}>
+                ✓ Destino editável &nbsp;•&nbsp; ✓ Métricas em tempo real &nbsp;•&nbsp; ✓ Cota do Plano
+              </div>
+            </div>
+
+            <div
+              onClick={() => setQrMode("static")}
+              style={{
+                padding: "18px 20px", borderRadius: 14, cursor: "pointer",
+                border: qrMode === "static" ? "2px solid #7c3aed" : "1px solid #e2e8f0",
+                backgroundColor: qrMode === "static" ? "#faf5ff" : "#ffffff",
+                boxShadow: qrMode === "static" ? "0 4px 14px rgba(124, 58, 237, 0.12)" : "0 1px 3px rgba(0,0,0,0.03)",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: qrMode === "static" ? "#7c3aed" : "#0f172a" }}>
+                  🏷️ QR Code Estático
+                </span>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 100,
+                  backgroundColor: "#7c3aed", color: "#ffffff", letterSpacing: "0.5px"
+                }}>
+                  ILIMITADO & GRÁTIS
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px 0", lineHeight: 1.5 }}>
+                O link vai gravado <strong>diretamente no código</strong>. Não consome cota do plano Free, mas não pode ser alterado após impresso.
+              </p>
+              <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 700 }}>
+                ✓ 100% Gratuito &nbsp;•&nbsp; ✓ Sem limites de cota &nbsp;•&nbsp; ✕ Sem métricas
+              </div>
+            </div>
+          </div>
 
           {/* Card Inicial: Website Input */}
           <div style={{
@@ -547,16 +620,31 @@ export default function NewCodePage() {
                 borderRadius: 16, padding: 32, textAlign: "center",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
               }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>
                   PREVIEW
                 </div>
 
+                {/* Badge do Modo */}
+                <div style={{
+                  marginBottom: 16, padding: "8px 12px", borderRadius: 8,
+                  backgroundColor: qrMode === "static" ? "#faf5ff" : "#f0f9ff",
+                  border: `1px solid ${qrMode === "static" ? "#e9d5ff" : "#bae6fd"}`,
+                  fontSize: 12, fontWeight: 700,
+                  color: qrMode === "static" ? "#7c3aed" : "#0284c7"
+                }}>
+                  {qrMode === "static" ? (
+                    <div>🏷️ <strong>QR Estático:</strong> Link gravado direto nos pixels</div>
+                  ) : (
+                    <div>⚡ <strong>QR Dinâmico:</strong> {shortLinkDisplay}</div>
+                  )}
+                </div>
+
                 {/* Canvas de Renderização */}
-                <div style={{ display: "inline-block", padding: 12, backgroundColor: "#ffffff", borderRadius: 12, marginBottom: 20 }}>
+                <div style={{ display: "inline-block", padding: 12, backgroundColor: "#ffffff", borderRadius: 12, marginBottom: 16 }}>
                   <canvas ref={canvasRef} style={{ display: "block", maxWidth: "100%", height: "auto" }} />
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
                   <button
                     onClick={() => {
                       setFrameStyle("bottom_banner");
@@ -572,20 +660,46 @@ export default function NewCodePage() {
                       fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4
                     }}
                   >
-                    <RotateCcw size={14} /> RESET DESIGN
+                    <RotateCcw size={14} /> Redefinir Design
                   </button>
                 </div>
 
+                {/* Botão de Download Imediato */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (canvasRef.current) {
+                      const url = canvasRef.current.toDataURL("image/png");
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${label || (qrMode === 'static' ? 'qr-estatico' : slug)}.png`;
+                      a.click();
+                    }
+                  }}
+                  style={{
+                    width: "100%", padding: "11px 14px", borderRadius: 8,
+                    border: "1px solid #cbd5e1", backgroundColor: "#ffffff",
+                    color: "#1e293b", fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", display: "flex", alignItems: "center",
+                    justifyContent: "center", gap: 8, marginBottom: 10
+                  }}
+                >
+                  <Download size={15} /> Baixar Imagem (PNG)
+                </button>
+
+                {/* Botão Principal de Conclusão */}
                 <button
                   onClick={handleCompleteCode}
                   disabled={saving}
                   style={{
                     width: "100%", padding: "14px", borderRadius: 8, border: "none",
-                    backgroundColor: saving ? "#7dd3fc" : "#0284c7", color: "#ffffff", fontSize: 14, fontWeight: 800,
-                    cursor: saving ? "wait" : "pointer", boxShadow: "0 4px 12px rgba(2,132,199,0.2)"
+                    backgroundColor: saving ? "#94a3b8" : (qrMode === "static" ? "#7c3aed" : "#0284c7"),
+                    color: "#ffffff", fontSize: 14, fontWeight: 800,
+                    cursor: saving ? "wait" : "pointer",
+                    boxShadow: qrMode === "static" ? "0 4px 12px rgba(124, 58, 237, 0.25)" : "0 4px 12px rgba(2,132,199,0.2)"
                   }}
                 >
-                  {saving ? "SAVING..." : "COMPLETE YOUR CODE"}
+                  {saving ? "Salvando..." : (qrMode === "static" ? "Salvar QR Estático no Painel" : "Salvar QR Dinâmico")}
                 </button>
               </div>
             </div>

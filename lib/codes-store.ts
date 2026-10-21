@@ -6,7 +6,7 @@ export interface QRCodeItem {
   label: string;
   slug: string;
   target_url: string;
-  type: "website" | "vcard" | "pdf" | "social" | "google_reviews" | "wifi" | "feedback";
+  type: "website" | "vcard" | "pdf" | "social" | "google_reviews" | "wifi" | "feedback" | "static" | string;
   business_name?: string;
   color: string;
   bg_color: string;
@@ -19,6 +19,12 @@ export interface QRCodeItem {
   active: boolean;
   expires_at?: string;
   created_at: string;
+}
+
+/** Verifica se um QR Code é do tipo Estático (link gravado direto no código, sem encurtador/redirect). */
+export function isStaticCode(code: { type?: string; slug?: string } | null | undefined): boolean {
+  if (!code) return false;
+  return code.type === "static" || (code.slug ? code.slug.startsWith("st-") : false);
 }
 
 /**

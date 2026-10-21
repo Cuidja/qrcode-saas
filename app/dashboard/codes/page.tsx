@@ -16,7 +16,7 @@ import {
   Download,
   Trash2
 } from "lucide-react";
-import { getStoredCodes, updateCodeTarget, toggleCodeActive, deleteCodeItem, QRCodeItem } from "@/lib/codes-store";
+import { getStoredCodes, updateCodeTarget, toggleCodeActive, deleteCodeItem, QRCodeItem, isStaticCode } from "@/lib/codes-store";
 import { renderCustomQRCode } from "@/lib/qr-renderer";
 
 // Componente para renderizar a miniatura real do QR Code de cada Card
@@ -29,8 +29,11 @@ function QRThumbnail({ code }: { code: QRCodeItem }) {
         ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
         : "http://localhost:3000";
 
+      const isStatic = isStaticCode(code);
+      const textToRender = isStatic ? code.target_url : `${baseUrl}/r/${code.slug}`;
+
       renderCustomQRCode(canvasRef.current, {
-        text: `${baseUrl}/r/${code.slug}`,
+        text: textToRender,
         width: 100,
         color: code.color || "#0f172a",
         bgColor: code.bg_color || "#ffffff",
@@ -353,44 +356,67 @@ export default function CodesPage() {
                   </a>
 
                   {/* Badges de Status */}
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12,
-                    backgroundColor: code.active ? "#dcfce7" : "#f1f5f9",
-                    color: code.active ? "#15803d" : "#64748b"
-                  }}>
-                    {code.active ? "Active" : "Paused"}
-                  </span>
+                  {isStaticCode(code) ? (
+                    <span style={{
+                      fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 12,
+                      backgroundColor: "#faf5ff", color: "#7c3aed", border: "1px solid #e9d5ff"
+                    }}>
+                      🏷️ Estático
+                    </span>
+                  ) : (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12,
+                      backgroundColor: code.active ? "#dcfce7" : "#f1f5f9",
+                      color: code.active ? "#15803d" : "#64748b"
+                    }}>
+                      {code.active ? "Ativo" : "Pausado"}
+                    </span>
+                  )}
                 </div>
 
-                {/* Short Link com atalho para copiar */}
+                {/* Short Link ou Destino Direto */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>
-                    {getAppBaseUrl().replace(/^https?:\/\//, "")}/r/{code.slug}
-                  </span>
-                  <button
-                    onClick={() => handleCopyLink(code)}
-                    style={{
-                      border: "none", background: "none", cursor: "pointer",
-                      padding: 2, display: "inline-flex", alignItems: "center"
-                    }}
-                    title="Copiar Shortlink"
-                  >
-                    {copiedId === code.id ? <Check size={14} color="#16a34a" /> : <Copy size={14} color="#94a3b8" />}
-                  </button>
+                  {isStaticCode(code) ? (
+                    <span style={{ fontSize: 13, color: "#7c3aed", fontWeight: 600 }}>
+                      ↳ Link Direto: {code.target_url}
+                    </span>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>
+                        {getAppBaseUrl().replace(/^https?:\/\//, "")}/r/{code.slug}
+                      </span>
+                      <button
+                        onClick={() => handleCopyLink(code)}
+                        style={{
+                          border: "none", background: "none", cursor: "pointer",
+                          padding: 2, display: "inline-flex", alignItems: "center"
+                        }}
+                        title="Copiar Shortlink"
+                      >
+                        {copiedId === code.id ? <Check size={14} color="#16a34a" /> : <Copy size={14} color="#94a3b8" />}
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Atalho de Destino Editável em 1-clique */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475569" }}>
                   <span>↳ {code.target_url}</span>
-                  <button
-                    onClick={() => handleOpenEdit(code)}
-                    style={{
-                      border: "none", background: "none", color: "#0284c7",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4
-                    }}
-                  >
-                    <Edit2 size={13} /> Destination
-                  </button>
+                  {!isStaticCode(code) ? (
+                    <button
+                      onClick={() => handleOpenEdit(code)}
+                      style={{
+                        border: "none", background: "none", color: "#0284c7",
+                        fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4
+                      }}
+                    >
+                      <Edit2 size={13} /> Destino
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>
+                      (Destino fixo)
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -398,24 +424,32 @@ export default function CodesPage() {
               <div style={{ textAlign: "right", paddingRight: 16, borderRight: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
                   <BarChart2 size={18} color="#64748b" />
-                  <span style={{ fontSize: 22, fontWeight: 900, color: "#0f172a" }}>{code.scans}</span>
+                  <span style={{ fontSize: 22, fontWeight: 900, color: "#0f172a" }}>
+                    {isStaticCode(code) ? "—" : code.scans}
+                  </span>
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, marginTop: 2 }}>scans</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, marginTop: 2 }}>
+                  {isStaticCode(code) ? "sem métricas" : "scans"}
+                </div>
               </div>
 
               {/* Coluna 4: Ações Rápida (Botões verticais) */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button
-                  onClick={() => handleOpenEdit(code)}
-                  title="Editar Destino"
-                  style={{
-                    width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0",
-                    backgroundColor: "#ffffff", cursor: "pointer", display: "flex",
-                    alignItems: "center", justifyContent: "center"
-                  }}
-                >
-                  <Edit2 size={16} color="#475569" />
-                </button>
+                {!isStaticCode(code) ? (
+                  <button
+                    onClick={() => handleOpenEdit(code)}
+                    title="Editar Destino"
+                    style={{
+                      width: 36, height: 36, borderRadius: 8, border: "1px solid #e2e8f0",
+                      backgroundColor: "#ffffff", cursor: "pointer", display: "flex",
+                      alignItems: "center", justifyContent: "center"
+                    }}
+                  >
+                    <Edit2 size={16} color="#475569" />
+                  </button>
+                ) : (
+                  <div style={{ width: 36 }} />
+                )}
 
                 <Link
                   href={`/dashboard/codes/${code.id}`}
@@ -436,8 +470,11 @@ export default function CodesPage() {
                       ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
                       : "http://localhost:3000";
 
+                    const isStatic = isStaticCode(code);
+                    const textToRender = isStatic ? code.target_url : `${baseUrl}/r/${code.slug}`;
+
                     renderCustomQRCode(tempCanvas, {
-                      text: `${baseUrl}/r/${code.slug}`,
+                      text: textToRender,
                       width: 400,
                       color: code.color || "#0f172a",
                       bgColor: code.bg_color || "#ffffff",

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { QrCode, BarChart3, HelpCircle, LogOut, TrendingUp } from "lucide-react";
+import { QrCode, BarChart3, HelpCircle, LogOut, CreditCard } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -16,6 +16,7 @@ export function Sidebar() {
   const navItems = [
     { label: "All QR Codes", href: "/dashboard/codes", icon: QrCode },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    { label: "Planos & Assinatura", href: "/dashboard/billing", icon: CreditCard },
   ];
 
   return (

@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Qr Cuidja — Gerador de QR Code Inteligente & Avaliações",
   description: "Crie, personalize e gerencie QR Codes dinâmicos com rastreamento e foco em avaliações 5 estrelas no Google.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

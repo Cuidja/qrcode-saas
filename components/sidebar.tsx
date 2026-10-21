@@ -4,9 +4,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { QrCode, BarChart3, HelpCircle, LogOut, CreditCard } from "lucide-react";
 
+import { useEffect, useState } from "react";
+import { getUserPlan } from "@/lib/user-plan";
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => {
+    getUserPlan().then(p => setIsPro(p.isPro));
+  }, [pathname]);
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -45,8 +54,18 @@ export function Sidebar() {
             <QrCode size={20} />
           </div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px", color: "#0f172a" }}>
-              Qr Cuidja
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px", color: "#0f172a" }}>
+                Qr Cuidja
+              </span>
+              <span style={{
+                fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4,
+                backgroundColor: isPro ? "#fef3c7" : "#f1f5f9",
+                color: isPro ? "#b45309" : "#64748b",
+                border: `1px solid ${isPro ? "#fcd34d" : "#e2e8f0"}`
+              }}>
+                {isPro ? "PRO" : "FREE"}
+              </span>
             </div>
           </div>
         </div>

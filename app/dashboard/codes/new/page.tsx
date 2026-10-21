@@ -22,8 +22,9 @@ import {
   RotateCcw
 } from "lucide-react";
 import { renderCustomQRCode } from "@/lib/qr-renderer";
-import { saveCodeItem, QRCodeItem } from "@/lib/codes-store";
+import { saveCodeItem, getStoredCodes, QRCodeItem } from "@/lib/codes-store";
 import { validateTargetUrl } from "@/lib/url-validation";
+import { getUserPlan } from "@/lib/user-plan";
 
 function generateSlug(len = 6) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -140,6 +141,14 @@ export default function NewCodePage() {
 
     setSaving(true);
     setFormError(null);
+
+    // Checar limite de criação de acordo com o Plano do Usuário
+    const [plan, stored] = await Promise.all([getUserPlan(), getStoredCodes()]);
+    if (!plan.isPro && stored.codes.length >= plan.limit) {
+      setFormError(`Você atingiu o limite de ${plan.limit} QR Codes do Plano Gratuito. Faça upgrade para o PRO para criar códigos ilimitados!`);
+      setSaving(false);
+      return;
+    }
 
     const result = await saveCodeItem({
       label: label || check.url,

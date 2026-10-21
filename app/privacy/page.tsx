@@ -97,7 +97,7 @@ export default function PrivacyPage() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #e2e8f0", padding: "24px", textAlign: "center", fontSize: 13, color: "#64748b" }}>
-        © {new Date().getFullYear()} Qr Cuidja. Todos os direitos reservados.
+        © 2026 Qr Cuidja. Todos os direitos reservados.
       </footer>
     </div>
   );

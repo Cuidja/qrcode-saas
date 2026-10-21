@@ -610,7 +610,7 @@ export default function HomePage() {
 
           <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, fontSize: 12 }}>
             <div>
-              © {new Date().getFullYear()} Qr Cuidja. Todos os direitos reservados.
+              © 2026 Qr Cuidja. Todos os direitos reservados.
             </div>
             <div>
               Desenvolvido com tecnologia de alta performance e foco em resultados.

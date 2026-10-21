@@ -142,9 +142,9 @@ export default function NewCodePage() {
     setSaving(true);
     setFormError(null);
 
-    // Checar limite de criação de acordo com o Plano do Usuário
+    // Checar limite de criação de acordo com o Plano do Usuário (Administradores têm cota infinita)
     const [plan, stored] = await Promise.all([getUserPlan(), getStoredCodes()]);
-    if (!plan.isPro && stored.codes.length >= plan.limit) {
+    if (!plan.isPro && !plan.isAdmin && stored.codes.length >= plan.limit) {
       setFormError(`Você atingiu o limite de ${plan.limit} QR Codes do Plano Gratuito. Faça upgrade para o PRO para criar códigos ilimitados!`);
       setSaving(false);
       return;

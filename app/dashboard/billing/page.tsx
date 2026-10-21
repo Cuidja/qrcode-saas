@@ -12,6 +12,7 @@ export default function BillingPage() {
     plan: "free",
     isPro: false,
     isAgency: false,
+    isAdmin: false,
     limit: 2,
     name: "Plano Free (Gratuito)"
   });
@@ -147,31 +148,35 @@ export default function BillingPage() {
 
       {/* Status Atual do Usuário */}
       <div style={{
-        background: planDetails.isPro ? "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)" : (isAtLimit ? "#fffbeb" : "#ffffff"),
-        border: `1px solid ${planDetails.isPro ? "#7dd3fc" : (isAtLimit ? "#fde68a" : "#e2e8f0")}`,
+        background: planDetails.isAdmin 
+          ? "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)" 
+          : (planDetails.isPro ? "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)" : (isAtLimit ? "#fffbeb" : "#ffffff")),
+        border: `1px solid ${planDetails.isAdmin ? "#c4b5fd" : (planDetails.isPro ? "#7dd3fc" : (isAtLimit ? "#fde68a" : "#e2e8f0"))}`,
         borderRadius: 16, padding: "24px 28px", marginBottom: 36,
         display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20,
-        boxShadow: planDetails.isPro ? "0 4px 16px rgba(2, 132, 199, 0.08)" : "0 1px 3px rgba(0,0,0,0.03)"
+        boxShadow: planDetails.isAdmin ? "0 4px 16px rgba(126, 34, 206, 0.1)" : (planDetails.isPro ? "0 4px 16px rgba(2, 132, 199, 0.08)" : "0 1px 3px rgba(0,0,0,0.03)")
       }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px",
               padding: "4px 10px", borderRadius: 100,
-              backgroundColor: planDetails.isPro ? "#0284c7" : "#64748b",
+              backgroundColor: planDetails.isAdmin ? "#7e22ce" : (planDetails.isPro ? "#0284c7" : "#64748b"),
               color: "#ffffff"
             }}>
               {planDetails.name}
             </div>
             {planDetails.isPro && (
-              <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                <Check size={14} /> Assinatura Ativa
+              <span style={{ fontSize: 12, color: planDetails.isAdmin ? "#7e22ce" : "#16a34a", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                <Check size={14} /> {planDetails.isAdmin ? "Acesso Administrador Vitalício" : "Assinatura Ativa"}
               </span>
             )}
           </div>
 
           <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 8 }}>
-            {planDetails.isPro ? "Acesso Ilimitado Liberado" : "Você está no Plano Free"}
+            {planDetails.isAdmin 
+              ? "Acesso Total de Administrador (∞ QR Codes)" 
+              : (planDetails.isPro ? "Acesso Ilimitado Liberado" : "Você está no Plano Free")}
           </div>
 
           <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
@@ -184,7 +189,16 @@ export default function BillingPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {planDetails.isPro ? (
+          {planDetails.isAdmin ? (
+            <div style={{
+              padding: "10px 20px", borderRadius: 8,
+              backgroundColor: "#7e22ce", color: "#ffffff", fontSize: 13,
+              fontWeight: 800, display: "flex", alignItems: "center", gap: 6,
+              boxShadow: "0 4px 12px rgba(126, 34, 206, 0.25)"
+            }}>
+              👑 Privilégio de Admin Ativo (∞ QRs)
+            </div>
+          ) : planDetails.isPro ? (
             <button
               onClick={handleCancelSubscription}
               style={{

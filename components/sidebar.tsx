@@ -11,9 +11,13 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isPro, setIsPro] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    getUserPlan().then(p => setIsPro(p.isPro));
+    getUserPlan().then(p => {
+      setIsPro(p.isPro);
+      setIsAdmin(Boolean(p.isAdmin));
+    });
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -60,11 +64,11 @@ export function Sidebar() {
               </span>
               <span style={{
                 fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4,
-                backgroundColor: isPro ? "#fef3c7" : "#f1f5f9",
-                color: isPro ? "#b45309" : "#64748b",
-                border: `1px solid ${isPro ? "#fcd34d" : "#e2e8f0"}`
+                backgroundColor: isAdmin ? "#f3e8ff" : (isPro ? "#fef3c7" : "#f1f5f9"),
+                color: isAdmin ? "#7e22ce" : (isPro ? "#b45309" : "#64748b"),
+                border: `1px solid ${isAdmin ? "#d8b4fe" : (isPro ? "#fcd34d" : "#e2e8f0")}`
               }}>
-                {isPro ? "PRO" : "FREE"}
+                {isAdmin ? "ADMIN" : (isPro ? "PRO" : "FREE")}
               </span>
             </div>
           </div>

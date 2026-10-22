@@ -15,6 +15,7 @@ import {
   QrCode as QrIcon, 
   Music, 
   MessageSquare, 
+  MessageCircle,
   Star,
   ArrowLeft,
   Check,
@@ -34,6 +35,7 @@ function generateSlug(len = 6) {
 // Preset de Tipos de QR Code do QRCG
 const CONTENT_TYPES = [
   { id: "website", title: "Website", desc: "Link to your website, any Google URL or document", icon: Globe },
+  { id: "whatsapp", title: "WhatsApp", desc: "Inicie conversas diretas com clientes via WhatsApp", icon: MessageCircle },
   { id: "vcard", title: "vCard Plus", desc: "Share personalized contact details", icon: Contact },
   { id: "pdf", title: "PDF", desc: "Link to a mobile-optimized PDF", icon: FileText },
   { id: "social", title: "Social Media", desc: "Link to your social media channels", icon: Share2 },
@@ -120,7 +122,18 @@ export default function NewCodePage() {
   }, [step, qrMode, qrTextToRender, targetUrl, slug, frameStyle, frameText, selectedLogo, shape, cornerStyle, qrColor, bgColor]);
 
   const handleCreateType = () => {
-    const check = validateTargetUrl(targetUrl);
+    let urlToUse = targetUrl.trim();
+
+    // Se o usuário digitou um telefone puro com DDD (ex: 05317244501), converte automaticamente para WhatsApp!
+    const cleanDigits = urlToUse.replace(/\D/g, "");
+    if (cleanDigits.length >= 10 && cleanDigits.length <= 11 && !urlToUse.includes(".")) {
+      const dddAndNum = cleanDigits.replace(/^0+/, "");
+      urlToUse = `https://wa.me/55${dddAndNum}`;
+      setSelectedLogo("whatsapp");
+      if (!label) setLabel(`WhatsApp (${dddAndNum})`);
+    }
+
+    const check = validateTargetUrl(urlToUse);
     if (!check.ok) {
       setFormError(check.error);
       return;
@@ -133,7 +146,16 @@ export default function NewCodePage() {
   const handleCompleteCode = async () => {
     if (saving) return;
 
-    const check = validateTargetUrl(targetUrl);
+    let urlToUse = targetUrl.trim();
+    const cleanDigits = urlToUse.replace(/\D/g, "");
+    if (cleanDigits.length >= 10 && cleanDigits.length <= 11 && !urlToUse.includes(".")) {
+      const dddAndNum = cleanDigits.replace(/^0+/, "");
+      urlToUse = `https://wa.me/55${dddAndNum}`;
+      setTargetUrl(urlToUse);
+      setSelectedLogo("whatsapp");
+    }
+
+    const check = validateTargetUrl(urlToUse);
     if (!check.ok) {
       setFormError(check.error);
       return;
@@ -313,6 +335,43 @@ export default function NewCodePage() {
                 CREATE
               </button>
             </div>
+
+            {/* Assistente inteligente para números de telefone / WhatsApp */}
+            {(() => {
+              const cleanDigits = targetUrl.replace(/\D/g, "");
+              if (cleanDigits.length >= 10 && cleanDigits.length <= 11 && !targetUrl.includes(".")) {
+                const dddAndNum = cleanDigits.replace(/^0+/, "");
+                return (
+                  <div style={{
+                    marginTop: 12, padding: "10px 14px", borderRadius: 8,
+                    backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0",
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12
+                  }}>
+                    <div style={{ fontSize: 13, color: "#166534" }}>
+                      💬 Detectamos o telefone <strong>{targetUrl}</strong>. Deseja criar como link direto do WhatsApp?
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetUrl(`https://wa.me/55${dddAndNum}`);
+                        setSelectedLogo("whatsapp");
+                        if (!label) setLabel(`WhatsApp (${dddAndNum})`);
+                        setFormError(null);
+                      }}
+                      style={{
+                        padding: "6px 12px", borderRadius: 6, border: "none",
+                        backgroundColor: "#22c55e", color: "#ffffff", fontSize: 12,
+                        fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap"
+                      }}
+                    >
+                      Converter para WhatsApp ↗
+                    </button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {formError && (
               <div role="alert" style={{ marginTop: 10, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
                 {formError}
@@ -433,6 +492,41 @@ export default function NewCodePage() {
                       border: "1px solid #cbd5e1", fontSize: 14, outline: "none", boxSizing: "border-box"
                     }}
                   />
+                  {/* Assistente inteligente para números de telefone / WhatsApp no Passo 2 */}
+                  {(() => {
+                    const cleanDigits = targetUrl.replace(/\D/g, "");
+                    if (cleanDigits.length >= 10 && cleanDigits.length <= 11 && !targetUrl.includes(".")) {
+                      const dddAndNum = cleanDigits.replace(/^0+/, "");
+                      return (
+                        <div style={{
+                          marginTop: 10, padding: "10px 14px", borderRadius: 8,
+                          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0",
+                          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12
+                        }}>
+                          <div style={{ fontSize: 13, color: "#166534" }}>
+                            💬 Detectamos o telefone <strong>{targetUrl}</strong>. Deseja criar como link de WhatsApp?
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTargetUrl(`https://wa.me/55${dddAndNum}`);
+                              setSelectedLogo("whatsapp");
+                              if (!label) setLabel(`WhatsApp (${dddAndNum})`);
+                              setFormError(null);
+                            }}
+                            style={{
+                              padding: "6px 12px", borderRadius: 6, border: "none",
+                              backgroundColor: "#22c55e", color: "#ffffff", fontSize: 12,
+                              fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap"
+                            }}
+                          >
+                            Converter para WhatsApp ↗
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 {formError && (
                   <div role="alert" style={{ marginTop: 10, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>

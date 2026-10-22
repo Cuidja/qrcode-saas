@@ -24,6 +24,7 @@ const PRIVATE_IP_PATTERNS = [
  * - Rejeita credenciais embutidas (user:senha@host).
  * - Proteção Anti-SSRF: rejeita localhost, IPs privados e metadados de nuvem.
  * - Proteção Anti-Looping: rejeita redirecionamentos recursivos para o próprio /r/.
+ * - Bloqueia números puros (como telefones ou chaves) de serem interpretados como IPs pelo parser de URL.
  */
 export function validateTargetUrl(input: string): UrlValidationResult {
   const raw = (input ?? "").trim();
@@ -34,6 +35,23 @@ export function validateTargetUrl(input: string): UrlValidationResult {
   }
   if (/[\s\u0000-\u001f]/.test(raw)) {
     return { ok: false, error: "A URL não pode conter espaços ou caracteres de controle inválidos." };
+  }
+
+  // 0. Bloquear se o usuário digitou apenas números (evita que a especificação WHATWG URL
+  // converta inteiros/octais como '05317244501' para o IP '43.61.73.65')
+  const cleanNumeric = raw.replace(/^https?:\/\//i, "").replace(/[\s/().-]/g, "");
+  if (/^\d+$/.test(cleanNumeric)) {
+    const phoneDigits = cleanNumeric.replace(/^0+/, "");
+    if (phoneDigits.length >= 10 && phoneDigits.length <= 11) {
+      return {
+        ok: false,
+        error: `O destino informado ('${raw}') parece um telefone/celular com DDD. Para WhatsApp, use o link: https://wa.me/55${phoneDigits}`
+      };
+    }
+    return {
+      ok: false,
+      error: `O destino informado ('${raw}') contém apenas números. Digite um endereço de site válido (exemplo: seusite.com.br).`
+    };
   }
 
   // Esquema explícito diferente de http(s) (ex.: javascript:, data:, mailto:, ftp://)
@@ -72,12 +90,18 @@ export function validateTargetUrl(input: string): UrlValidationResult {
     }
   }
 
-  // 5. Exigir formato de domínio válido
+  // 5. Bloquear endereços IP numéricos (IPv4 ou inteiros resolvidos)
+  // Domínios públicos obrigatoriamente devem conter letras (ex: site.com.br)
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host) || !/[a-z]/i.test(host)) {
+    return { ok: false, error: "Endereços IP diretos ou numéricos não são permitidos. Informe um domínio válido (exemplo: seusite.com.br)." };
+  }
+
+  // 6. Exigir formato de domínio válido
   if (!host.includes(".")) {
     return { ok: false, error: "Informe um domínio público válido (exemplo: seusite.com.br)." };
   }
 
-  // 6. Proteção Anti-Looping (Não permitir que um QR Code aponte para outro /r/ do próprio domínio)
+  // 7. Proteção Anti-Looping (Não permitir que um QR Code aponte para outro /r/ do próprio domínio)
   const pathname = parsed.pathname.toLowerCase();
   if ((host === "qr.cuidja.com" || host.endsWith("cuidja.com")) && pathname.startsWith("/r/")) {
     return { ok: false, error: "Não é permitido criar redirecionamentos recursivos para o próprio encurtador." };
